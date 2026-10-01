@@ -1,26 +1,181 @@
 @import "tailwindcss";
 
+/* ───────────────────────────────────────────────────────────────
+   AriArian design tokens
+   Source of truth: Obsidian Vault/AriArian/{Color,Type,Elevation,
+   Motion,Grid} Tokens.md — figma file rvlu1upwT2GPqYT3ZKlP3k
+   Do not edit values here; edit the stub and re-derive.
+   ─────────────────────────────────────────────────────────────── */
+
+@theme {
+  --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+
+  /* Primary Blue — Primary Blue/500 is the brand accent */
+  --color-brand-50: #e9f8ff;
+  --color-brand-100: #c9f0ff;
+  --color-brand-200: #93e1ff;
+  --color-brand-300: #5cd2ff;
+  --color-brand-400: #26c3ff;
+  --color-brand-500: #00adef;
+  --color-brand-600: #008ec4;
+  --color-brand-700: #006f9a;
+  --color-brand-800: #00506f;
+
+  /* Neutral ramp */
+  --color-n-100: #ffffff;
+  --color-n-200: #f5f5f5;
+  --color-n-300: #f2f2f2;
+  --color-n-350: #6c6c6c;
+  --color-n-400: #494949;
+  --color-n-500: #333333;
+  --color-n-600: #060606;
+
+  /* Working neutrals (v2 composition) */
+  --color-ink: #061111;
+  --color-ink-2: #5a6a75;
+  --color-ink-3: #8c98a2;
+  --color-line: #e4eaef;
+  --color-tint: #f7f9fa;
+  --color-page: #f5f5f5;
+  --color-dash: #c9d1d7;
+
+  /* Semantic — healthy / attention / critical */
+  --color-good-soft: #d7ffc9;
+  --color-good-solid: #7fc864;
+  --color-good-text: #3c901e;
+  --color-warn-soft: #ffebc9;
+  --color-warn-solid: #ffc561;
+  --color-warn-text: #c47f07;
+  --color-bad-soft: #ffd4c9;
+  --color-bad-solid: #ff8061;
+  --color-bad-text: #b52503;
+  --color-bad-chart: #ee6a4c;
+
+  /* Category chips (Registry v2) */
+  --color-cat-hw-bg: #ffe6df;
+  --color-cat-hw: #e2380f;
+  --color-cat-veh-bg: #fde8fb;
+  --color-cat-veh: #b3189f;
+  --color-cat-off-bg: #fff3d6;
+  --color-cat-off: #d38a00;
+  --color-cat-app-bg: #ececec;
+  --color-cat-app: #404040;
+  --color-cat-sw-bg: #dff4ff;
+  --color-cat-sw: #0b84c2;
+  --color-cat-ess-bg: #e7fbe0;
+  --color-cat-ess: #2f9a12;
+
+  /* Date colour tiers — colour only where there is a decision */
+  --color-date-past: #5a6a75;
+  --color-date-due: #b37400;
+  --color-date-over: #b52509;
+
+  /* Elevation radii */
+  --radius-raised: 16px;
+  --radius-flat: 14px;
+  --radius-tinted: 12px;
+
+  /* Effect styles */
+  --shadow-raised: 0 8px 24px -4px rgb(5 18 18 / 0.1);
+  --shadow-overlay: 0 20px 48px -8px rgb(5 18 18 / 0.18);
+  --shadow-lift: 0 14px 32px -8px rgb(5 18 18 / 0.16);
+
+  /* Chart encodings — severity ramp kept lightness-monotonic */
+  --color-sev-1: #7fc864;
+  --color-sev-2: #ffc561;
+  --color-sev-3: #ee6a4c;
+
+  --color-seq-1: #c9f0ff;
+  --color-seq-2: #5cd2ff;
+  --color-seq-3: #00adef;
+  --color-seq-4: #008ec4;
+
+  /* Motion — one curve for everything */
+  --ease-ariarian: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Shell metrics — 1440 x 1024 viewport */
+  --spacing-sidebar: 308px;
+  --spacing-sidebar-collapsed: 84px;
+  --spacing-topbar: 84px;
+  --spacing-row: 48px;
+  --spacing-row-head: 40px;
+
+  --animate-shimmer: shimmer 1.4s linear infinite;
+  --animate-shake: shake 420ms var(--ease-ariarian);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --dur-hover: 120ms;
+  --dur-state: 200ms;
+  --dur-page: 240ms;
+  --dur-overlay: 260ms;
+  --dur-swap: 220ms;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html { scrollbar-gutter: stable; }
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-page);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Type ramp ──────────────────────────────────────────────────
+   Label/L1 is the ONLY style that forces case.
+   ─────────────────────────────────────────────────────────────── */
+@layer components {
+  .t-t1  { font-size: 80px; font-weight: 700; line-height: 1.05; letter-spacing: -0.025em; }
+  .t-h1  { font-size: 40px; font-weight: 700; line-height: 1.10; letter-spacing: -0.02em; }
+  .t-h2  { font-size: 32px; font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; }
+  .t-h3  { font-size: 28px; font-weight: 600; line-height: 1.20; letter-spacing: -0.015em; }
+  .t-h4  { font-size: 24px; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; }
+  .t-h5  { font-size: 20px; font-weight: 600; line-height: 1.30; letter-spacing: -0.01em; }
+  .t-b1  { font-size: 16px; font-weight: 400; line-height: 1.50; }
+  .t-b2  { font-size: 14px; font-weight: 400; line-height: 1.40; }
+  .t-b2s { font-size: 14px; font-weight: 500; line-height: 1.40; }
+  .t-b3  { font-size: 12px; font-weight: 400; line-height: 1.40; }
+  .t-l1  { font-size: 12px; font-weight: 600; line-height: 1.30; letter-spacing: 0.06em; text-transform: uppercase; }
+
+  .card-raised { background: #fff; border-radius: var(--radius-raised); box-shadow: var(--shadow-raised); }
+  .card-flat   { background: #fff; border-radius: var(--radius-flat); border: 1px solid var(--color-line); }
+  .card-tinted { background: var(--color-tint); border-radius: var(--radius-tinted); }
+
+  .dash-b { background-image: linear-gradient(to right, var(--color-dash) 50%, transparent 0); background-size: 22px 1px; background-repeat: repeat-x; background-position: bottom; }
+  .dash-t { background-image: linear-gradient(to right, var(--color-dash) 50%, transparent 0); background-size: 22px 1px; background-repeat: repeat-x; background-position: top; }
+
+  .skeleton {
+    background: linear-gradient(90deg, #eef2f5 0px, #f7f9fa 120px, #eef2f5 240px);
+    background-size: 800px 100%;
+    animation: var(--animate-shimmer);
+    border-radius: 6px;
+  }
+
+  .tnum { font-variant-numeric: tabular-nums; }
+  .focus-ring { outline: none; }
+  .focus-ring:focus-visible { box-shadow: 0 0 0 3px var(--color-brand-200); }
+}
+
+::selection { background: var(--color-brand-100); }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

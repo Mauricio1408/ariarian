@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# but do commit the template
+!.env.local.example
+
+# local agent config
+.claude/
