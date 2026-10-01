@@ -24,7 +24,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         {process.env.NODE_ENV === "development" && (
           // Dev only: a hidden preview pane pauses requestAnimationFrame, which stalls Motion.
-          <script dangerouslySetInnerHTML={{ __html: "if(document.hidden){window.requestAnimationFrame=function(cb){return setTimeout(function(){cb(performance.now())},16)};window.cancelAnimationFrame=clearTimeout;}" }} />
+          <script dangerouslySetInnerHTML={{ __html: "if(document.hidden){window.__ARIARIAN_HIDDEN__=1;window.requestAnimationFrame=function(cb){return setTimeout(function(){cb(performance.now())},16)};window.cancelAnimationFrame=clearTimeout;}" }} />
         )}
       </head>
       <body className={`${hanken.variable} font-sans antialiased`}>

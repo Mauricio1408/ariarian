@@ -4,9 +4,10 @@
 // so the Audit Log is a real trail of what the viewer did in the demo.
 // State persists to localStorage; "Reset demo" restores the seed.
 
+import { MotionGlobalConfig } from "motion/react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { buildSeed, CUSTODIAN_ID, ME_ID } from "./seed";
-import type { AppNotification, Asset, AuditEntry, Dataset, Employee, PropertyForm, Settings, WorkOrder, WorkOrderStage } from "./types";
+import type { AppNotification, Asset, AuditEntry, Dataset, Employee, PropertyForm, Session, Settings, WorkOrder, WorkOrderStage } from "./types";
 import { AS_OF } from "./types";
 import { formType } from "./selectors";
 
@@ -14,6 +15,7 @@ export type Role = "admin" | "custodian";
 
 interface State extends Dataset {
   role: Role;
+  session: Session | null;
   registryEmpty: boolean;
   seq: number;
   hydrated?: boolean;
@@ -23,6 +25,11 @@ type Action =
   | { type: "hydrate"; state: State | null }
   | { type: "reset" }
   | { type: "role"; role: Role }
+  | { type: "login"; employeeId: string; remember: boolean }
+  | { type: "logout" }
+  | { type: "requestAccess"; name: string; email: string; office: string; employeeId: string }
+  | { type: "logService"; assetId: string; date: string; cost: number; provider: string; description: string }
+  | { type: "attachDocument"; assetId: string; name: string; size: number }
   | { type: "registryEmpty"; on: boolean }
   | { type: "transfer"; assetIds: string[]; to: string; office?: string; address?: string }
   | { type: "resolve"; woId: string; outcome: "storage" | "service"; note: string }
@@ -40,14 +47,19 @@ type Action =
   | { type: "restoreWorkOrder"; wo: WorkOrder }
   | { type: "editWorkOrder"; wo: WorkOrder };
 
-const KEY = "ariarian:v2";
+const KEY = "ariarian:v3";
+
+// Dev only: a preview pane loaded hidden throttles timers, so Motion would crawl — skip animation there.
+if (process.env.NODE_ENV === "development" && typeof window !== "undefined" && (window as unknown as { __ARIARIAN_HIDDEN__?: number }).__ARIARIAN_HIDDEN__) {
+  MotionGlobalConfig.skipAnimations = true;
+}
 
 function fresh(): State {
-  return { ...buildSeed(), role: "admin", registryEmpty: false, seq: 1 };
+  return { ...buildSeed(), role: "admin", session: null, registryEmpty: false, seq: 1 };
 }
 
 function audit(s: State, e: Omit<AuditEntry, "id" | "date" | "byId">): AuditEntry {
-  return { id: `AU-L${s.seq}`, date: AS_OF, byId: s.role === "admin" ? ME_ID : CUSTODIAN_ID, fresh: true, ...e };
+  return { id: `AU-L${s.seq}`, date: AS_OF, byId: s.session?.employeeId ?? (s.role === "admin" ? ME_ID : CUSTODIAN_ID), fresh: true, ...e };
 }
 
 function notify(s: State, n: Omit<AppNotification, "id" | "date" | "time" | "read">): AppNotification {
@@ -59,9 +71,23 @@ function notify(s: State, n: Omit<AppNotification, "id" | "date" | "time" | "rea
 function reducer(s: State, a: Action): State {
   const seq = s.seq + 1;
   switch (a.type) {
-    case "hydrate": return { ...(a.state ?? s), hydrated: true };
-    case "reset": return fresh();
-    case "role": return { ...s, role: a.role };
+    case "hydrate": {
+      const base = a.state ? { ...fresh(), ...a.state } : s;
+      return { ...base, hydrated: true };
+    }
+    case "reset": return { ...fresh(), session: s.session, role: s.role, hydrated: s.hydrated };
+    case "role": return { ...s, role: a.role, session: s.session ? { ...s.session, employeeId: a.role === "admin" ? ME_ID : CUSTODIAN_ID } : s.session };
+    case "login": return { ...s, session: { employeeId: a.employeeId, remember: a.remember }, role: a.employeeId === ME_ID ? "admin" : "custodian" };
+    case "logout": return { ...s, session: null };
+    case "requestAccess":
+      return { ...s, seq: seq + 1, notifications: [notify({ ...s, seq }, { kind: "people", title: "Access requested", body: `${a.name} (${a.employeeId}) asked for an account at ${a.office} — ${a.email}`, action: { label: "Review", href: "/employees?tab=All" } }), ...s.notifications] };
+    case "logService": {
+      const id = `WO-${3000 + seq}`;
+      const wo: WorkOrder = { id, assetId: a.assetId, problem: "Others", summary: a.description || "Service logged", priority: "Low", technician: a.provider || "In-house", stage: "resolved", reportedOn: a.date, reportedBy: s.session?.employeeId ?? ME_ID, promisedOn: a.date, closedOn: a.date, cost: a.cost, resolution: a.description };
+      return { ...s, seq: seq + 1, workOrders: [wo, ...s.workOrders], audit: [audit(s, { assetId: a.assetId, action: "Updated", note: `Service logged · ₱${a.cost.toLocaleString("en-PH")}` }), ...s.audit] };
+    }
+    case "attachDocument":
+      return { ...s, seq, assets: s.assets.map((x) => x.id === a.assetId ? { ...x, documents: [{ name: a.name, size: a.size, addedOn: AS_OF }, ...(x.documents ?? [])] } : x), audit: [audit(s, { assetId: a.assetId, action: "Updated", note: `Attached ${a.name}` }), ...s.audit] };
     case "registryEmpty": return { ...s, registryEmpty: a.on };
     case "transfer": {
       const to = s.employees.find((e) => e.id === a.to);
@@ -163,13 +189,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY);
-      dispatch({ type: "hydrate", state: raw ? JSON.parse(raw) : null });
+      const saved = raw ? (JSON.parse(raw) as State) : null;
+      // "Remember me" off → the session lives only as long as the browser tab.
+      if (saved?.session && !saved.session.remember && !sessionStorage.getItem("ariarian:tab")) saved.session = null;
+      dispatch({ type: "hydrate", state: saved });
     } catch { dispatch({ type: "hydrate", state: null }); /* storage unavailable — run on the seed */ }
   }, []);
 
   const hydrated = !!state.hydrated;
   useEffect(() => {
     if (!hydrated) return;
+    try { if (state.session) sessionStorage.setItem("ariarian:tab", "1"); else sessionStorage.removeItem("ariarian:tab"); } catch { /* ignore */ }
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* ignore */ }
   }, [state, hydrated]);
 
@@ -181,8 +211,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [dismissToast]);
 
   const me = useMemo(
-    () => state.employees.find((e) => e.id === (state.role === "admin" ? ME_ID : CUSTODIAN_ID))!,
-    [state.employees, state.role],
+    () => state.employees.find((e) => e.id === (state.session?.employeeId ?? (state.role === "admin" ? ME_ID : CUSTODIAN_ID)))
+      ?? state.employees.find((e) => e.id === ME_ID)!,
+    [state.employees, state.role, state.session],
   );
 
   const issueForms = useCallback((employeeId: string, assetIds?: string[]) => {

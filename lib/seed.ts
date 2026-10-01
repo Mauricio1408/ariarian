@@ -20,7 +20,7 @@ import type {
   Agency, Asset, AssetCategory, AuditEntry, AppNotification, Dataset, Employee,
   OperationalStatus, PhysicalCondition, Priority, ProblemType, PropertyForm, WorkOrder,
 } from "./types";
-import { AS_OF } from "./types";
+import { AS_OF, DEPARTMENTS } from "./types";
 
 /* ── PRNG ─────────────────────────────────────────────────────── */
 function mulberry32(a: number) {
@@ -83,17 +83,17 @@ const ROOMS = ["Room 201", "Room 305", "Records Room", "Server Room", "Lab 2", "
 
 /* ── Employees ────────────────────────────────────────────────── */
 const NAMED_EMPLOYEES: Employee[] = [
-  { id: "DOST-2016-0102", name: "Mauricio Bergancia", email: "m.bergancia@dost.gov.ph", position: "Administrative Officer V", office: "Central Office", status: "Active", avatar: "/img/people/mauricio.jpg", lastAudit: "2026-03-02" },
-  { id: "DOST-2019-0117", name: "Juan Dela Cruz", email: "juandelacruz@dost.gov.ph", position: "Administrative Officer III", office: "Central Office", status: "Active", avatar: "/img/people/juan.jpg", lastAudit: "2026-03-11" },
-  { id: "DOST-2020-0342", name: "Maria Santos", email: "msantos@dost.gov.ph", position: "Administrative Officer II", office: "Regional Office VI", status: "Active", avatar: "/img/people/maria.jpg", lastAudit: "2026-02-18" },
-  { id: "DOST-2021-0088", name: "Ramon Cruz", email: "rcruz@dost.gov.ph", position: "Administrative Aide VI", office: "Central Office", status: "Active", avatar: "/img/people/ramon.jpg", lastAudit: "2026-02-24" },
-  { id: "DOST-2018-0225", name: "Liza Reyes", email: "lreyes@dost.gov.ph", position: "Supply Officer II", office: "Central Office", status: "Active", avatar: "/img/people/liza.jpg", lastAudit: "2026-03-05" },
-  { id: "DOST-2017-0056", name: "Ana Villanueva", email: "avillanueva@dost.gov.ph", position: "Science Research Spec. II", office: "Regional Office XI", status: "Active", avatar: "/img/people/ana.jpg", lastAudit: "2026-01-30" },
-  { id: "DOST-2015-0311", name: "Grace Tan", email: "gtan@dost.gov.ph", position: "Motor Pool Supervisor", office: "Logistics Center", status: "Active", avatar: "/img/people/grace.jpg", lastAudit: "2026-01-08" },
-  { id: "DOST-2022-0140", name: "Carlos Rivera", email: "crivera@dost.gov.ph", position: "IT Officer I", office: "Central Office", status: "Active", avatar: "/img/people/carlos.jpg", lastAudit: "2026-02-10" },
-  { id: "DOST-2023-0511", name: "Paolo Mendoza", email: "pmendoza@dost.gov.ph", position: "Project Dev. Officer I", office: "Regional Office III", status: "Clearance", avatar: "/img/people/paolo.jpg", clearanceDeadline: "2026-03-27" },
-  { id: "DOST-2015-0044", name: "Rosa Lim", email: "rlim@dost.gov.ph", position: "Administrative Officer IV", office: "Central Office", status: "Clearance", avatar: "/img/people/rosa.png", clearanceDeadline: "2026-03-10" },
-  { id: "DOST-2021-0377", name: "Miguel Bautista", email: "mbautista@dost.gov.ph", position: "Science Research Analyst", office: "Regional Office VI", status: "Clearance", avatar: "/img/people/miguel.jpg", clearanceDeadline: "2026-03-12" },
+  { id: "DOST-2016-0102", department: "Administrative Service (AS)", name: "Mauricio Bergancia", email: "m.bergancia@dost.gov.ph", position: "Administrative Officer V", office: "Central Office", status: "Active", avatar: "/img/people/mauricio.jpg", lastAudit: "2026-03-02" },
+  { id: "DOST-2019-0117", department: "Administrative Service (AS)", name: "Juan Dela Cruz", email: "juandelacruz@dost.gov.ph", position: "Administrative Officer III", office: "Central Office", status: "Active", avatar: "/img/people/juan.jpg", lastAudit: "2026-03-11" },
+  { id: "DOST-2020-0342", department: "Planning and Evaluation Service (PES)", name: "Maria Santos", email: "msantos@dost.gov.ph", position: "Administrative Officer II", office: "Regional Office VI", status: "Active", avatar: "/img/people/maria.jpg", lastAudit: "2026-02-18" },
+  { id: "DOST-2021-0088", department: "Administrative Service (AS)", name: "Ramon Cruz", email: "rcruz@dost.gov.ph", position: "Administrative Aide VI", office: "Central Office", status: "Active", avatar: "/img/people/ramon.jpg", lastAudit: "2026-02-24" },
+  { id: "DOST-2018-0225", department: "Financial and Management Service (FMS)", name: "Liza Reyes", email: "lreyes@dost.gov.ph", position: "Supply Officer II", office: "Central Office", status: "Active", avatar: "/img/people/liza.jpg", lastAudit: "2026-03-05" },
+  { id: "DOST-2017-0056", department: "Science and Technology Information Institute (STII)", name: "Ana Villanueva", email: "avillanueva@dost.gov.ph", position: "Science Research Spec. II", office: "Regional Office XI", status: "Active", avatar: "/img/people/ana.jpg", lastAudit: "2026-01-30" },
+  { id: "DOST-2015-0311", department: "Administrative Service (AS)", name: "Grace Tan", email: "gtan@dost.gov.ph", position: "Motor Pool Supervisor", office: "Logistics Center", status: "Active", avatar: "/img/people/grace.jpg", lastAudit: "2026-01-08" },
+  { id: "DOST-2022-0140", department: "Science and Technology Information Institute (STII)", name: "Carlos Rivera", email: "crivera@dost.gov.ph", position: "IT Officer I", office: "Central Office", status: "Active", avatar: "/img/people/carlos.jpg", lastAudit: "2026-02-10" },
+  { id: "DOST-2023-0511", department: "Technology Application and Promotion Institute (TAPI)", name: "Paolo Mendoza", email: "pmendoza@dost.gov.ph", position: "Project Dev. Officer I", office: "Regional Office III", status: "Clearance", avatar: "/img/people/paolo.jpg", clearanceDeadline: "2026-03-27" },
+  { id: "DOST-2015-0044", department: "Office of the Secretary (OSEC)", name: "Rosa Lim", email: "rlim@dost.gov.ph", position: "Administrative Officer IV", office: "Central Office", status: "Clearance", avatar: "/img/people/rosa.png", clearanceDeadline: "2026-03-10" },
+  { id: "DOST-2021-0377", department: "Planning and Evaluation Service (PES)", name: "Miguel Bautista", email: "mbautista@dost.gov.ph", position: "Science Research Analyst", office: "Regional Office VI", status: "Clearance", avatar: "/img/people/miguel.jpg", clearanceDeadline: "2026-03-12" },
 ];
 export const ME_ID = "DOST-2016-0102";
 export const CUSTODIAN_ID = "DOST-2019-0117";
@@ -115,6 +115,7 @@ function genEmployees(): Employee[] {
       email: `${first[0].toLowerCase()}${last.toLowerCase()}@dost.gov.ph`,
       position: pick(POSITIONS),
       office: pick(OFFICES.slice(0, 4)),
+      department: DEPARTMENTS[(i * 3) % DEPARTMENTS.length],
       status: i === 11 ? "On Leave" : "Active",
       avatar: i < 3 ? AVATAR_POOL[i] : undefined,
       lastAudit: iso(2026, 1 + Math.floor(rnd() * 2), 1 + Math.floor(rnd() * 27)),
@@ -124,7 +125,7 @@ function genEmployees(): Employee[] {
 }
 
 /* ── Assets ───────────────────────────────────────────────────── */
-type Draft = Omit<Asset, "acquiredOn" | "warrantyStart" | "warrantyEnd" | "room" | "address" | "agency" | "office" | "tag"> &
+type Draft = Omit<Asset, "acquiredOn" | "warrantyStart" | "warrantyEnd" | "room" | "address" | "agency" | "office" | "tag" | "department"> &
   Partial<Pick<Asset, "acquiredOn" | "warrantyEnd" | "room" | "address" | "agency" | "office" | "tag">>;
 
 const NAMED_ASSETS: Draft[] = [
@@ -292,8 +293,10 @@ function genAssets(employees: Employee[]): Asset[] {
     const m = y === 2026 ? 4 + Math.floor(rnd() * 8) : 1 + Math.floor(rnd() * 12);
     d.warrantyEnd = iso(y, m, 1 + Math.floor(rnd() * 27));
   });
-  return drafts.map((d) => ({
+  const empDept = new Map(employees.map((e) => [e.id, e.department]));
+  return drafts.map((d, i) => ({
     ...d,
+    department: (d.custodianId && empDept.get(d.custodianId)) || DEPARTMENTS[i % DEPARTMENTS.length],
     tag: d.tag!, agency: d.agency!, office: d.office!, room: d.room!, address: d.address!, acquiredOn: d.acquiredOn!,
     warrantyStart: d.acquiredOn!,
     warrantyEnd: d.warrantyEnd!,

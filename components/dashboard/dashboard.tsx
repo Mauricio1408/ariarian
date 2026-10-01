@@ -96,7 +96,7 @@ function Kpi({ label, dot, value, delta, tone, spark, last, onClick }: {
         <p className="text-[32px] font-bold tracking-[-0.02em] leading-[1.15] mt-1">{value}</p>
         <span className={cn("inline-flex items-center rounded-full px-2.5 h-[22px] text-[12px] mt-1 whitespace-nowrap", pill)}>{delta}</span>
       </div>
-      <div className="pt-6 transition-transform duration-200 group-hover:-translate-y-0.5"><Sparkbars tone={spark} /></div>
+      <div className="pt-6"><Sparkbars tone={spark} /></div>
     </button>
   );
 }
@@ -155,7 +155,7 @@ function HealthCard({ onOpen }: { onOpen: () => void }) {
               <span className="t-b2 text-ink-2 text-right tnum">{(((counts[k] ?? 0) / total) * 100).toFixed(1).replace(".0", "")}%</span>
             </button>
           ))}
-          <motion.button onClick={onOpen} whileHover={{ y: -1 }} transition={T.hover}
+          <motion.button onClick={onOpen}
             className="mt-3 w-full text-left rounded-lg bg-bad-soft/45 px-3 py-2.5 t-l1 text-bad-text leading-[1.45] cursor-pointer">
             {Math.round(((counts.Poor ?? 0) / total) * 100) >= 50 ? "Half the portfolio is" : `${Math.round(((counts.Poor ?? 0) / total) * 100)}% of the portfolio is`} in poor condition — {counts.Poor ?? 0} assets flagged as critical needs.
           </motion.button>

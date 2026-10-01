@@ -162,6 +162,12 @@ body {
   }
 
   .tnum { font-variant-numeric: tabular-nums; }
+
+  /* Slim overlay scrollbars — modals, drawers, panels. */
+  .scroll-slim { scrollbar-width: thin; scrollbar-color: #c9d1d7 transparent; }
+  .scroll-slim::-webkit-scrollbar { width: 8px; height: 8px; }
+  .scroll-slim::-webkit-scrollbar-thumb { background: #c9d1d7; border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+  .scroll-slim::-webkit-scrollbar-track { background: transparent; }
   .focus-ring { outline: none; }
   .focus-ring:focus-visible { box-shadow: 0 0 0 3px var(--color-brand-200); }
 }

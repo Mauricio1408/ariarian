@@ -68,10 +68,9 @@ export function IconButton({ icon: I, label, className, tone, ...rest }: { icon:
     <motion.button
       aria-label={label}
       title={label}
-      whileHover={{ scale: 1.12 }}
-      whileTap={{ scale: 0.9 }}
+      whileTap={{ scale: 0.94 }}
       transition={T.hover}
-      className={cn("grid place-items-center size-8 rounded-md cursor-pointer focus-ring hover:bg-tint", tone, className)}
+      className={cn("grid place-items-center size-8 rounded-md cursor-pointer focus-ring hover:bg-tint transition-colors duration-[120ms]", tone, className)}
       {...rest}
     >
       <I size={18} strokeWidth={1.75} />
@@ -124,7 +123,7 @@ export function PriorityPill({ p }: { p: Priority }) {
   return <Pill tone={p === "High" ? "bad" : p === "Medium" ? "warn" : "neutral"} className="rounded-full">{p}</Pill>;
 }
 
-/* ── Checkbox ─────────────────────────────────────────────────── */
+/* ── Checkbox — blue when active (Figma Table Data / Checked Box 855:2519) ── */
 export function Checkbox({ checked, indeterminate, onChange, label, className }: { checked: boolean; indeterminate?: boolean; onChange: (v: boolean) => void; label?: string; className?: string }) {
   const on = checked || indeterminate;
   return (
@@ -135,16 +134,16 @@ export function Checkbox({ checked, indeterminate, onChange, label, className }:
       aria-label={label}
       onClick={(e) => { e.stopPropagation(); onChange(!checked); }}
       className={cn("relative grid place-items-center size-[18px] shrink-0 rounded-[4px] border-[1.75px] cursor-pointer focus-ring",
-        "transition-colors duration-[120ms] ease-ariarian", on ? "bg-ink border-ink" : "bg-white border-ink hover:bg-tint", className)}
+        "transition-colors duration-[120ms] ease-ariarian", on ? "bg-brand-500 border-brand-500" : "bg-white border-ink hover:border-brand-500", className)}
     >
-      <motion.svg viewBox="0 0 16 16" className="size-3.5 text-white" initial={false}>
-        {indeterminate ? (
-          <motion.path d="M4 8h8" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={T.state} />
+      <svg viewBox="0 0 16 16" className="size-3.5 text-white">
+        {indeterminate && !checked ? (
+          <path key="dash" d="M4 8h8" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" />
         ) : (
-          <motion.path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"
+          <motion.path key="check" d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"
             initial={false} animate={{ pathLength: checked ? 1 : 0, opacity: checked ? 1 : 0 }} transition={T.state} />
         )}
-      </motion.svg>
+      </svg>
     </button>
   );
 }
@@ -203,7 +202,7 @@ export function CountUp({ value, format = (n: number) => Math.round(n).toLocaleS
 }
 
 /* ── KPI spark bars (the five-step mini bars on stat cards) ───── */
-export function Sparkbars({ tone, delay = 0 }: { tone: "good" | "warn" | "bad" | "brand" | "amber"; delay?: number }) {
+export function Sparkbars({ tone }: { tone: "good" | "warn" | "bad" | "brand" | "amber"; delay?: number }) {
   const colors = {
     good: ["#d7ffc9", "#c4f3b2", "#b0e99b", "#9bdc84", "#3c901e"],
     warn: ["#ffebc9", "#ffe0ab", "#ffd58e", "#ffcb73", "#c47f07"],
@@ -215,8 +214,7 @@ export function Sparkbars({ tone, delay = 0 }: { tone: "good" | "warn" | "bad" |
   return (
     <span className="inline-flex items-end gap-[3px] h-6" aria-hidden>
       {colors.map((c, i) => (
-        <motion.span key={i} className="w-[5px] rounded-[2px]" style={{ background: c, height: h[i], transformOrigin: "bottom" }}
-          initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} transition={{ ...T.page, delay: delay + 0.25 + i * 0.05 }} />
+        <span key={i} className="w-[5px] rounded-[2px]" style={{ background: c, height: h[i] }} />
       ))}
     </span>
   );

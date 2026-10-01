@@ -3,7 +3,7 @@
 import { Suspense, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowDown, Box, ChevronDown, CircleDot, Loader, Maximize2, Pencil, Plus, Send, Tag, Trash2, Wrench } from "lucide-react";
+import { Box, ChevronDown, CircleDot, Loader, Maximize2, Pencil, Plus, Send, Tag, Trash2, Wrench } from "lucide-react";
 import { useLookups, useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { PRIORITY, PROBLEM_TYPE } from "@/lib/types";
@@ -15,7 +15,7 @@ import { useExport } from "@/lib/use-export";
 import { Page, PageTitle } from "@/components/shell/topbar";
 import { Button, Checkbox, CountUp, IconButton, Thumb } from "@/components/ui/primitives";
 import { MenuItem, Popover } from "@/components/ui/overlay";
-import { FilterChips, FilterMenu, Pager, SearchBox, SortMenu, Th, rowMotion, type FilterValue } from "@/components/ui/table";
+import { ExportButton, FilterChips, FilterMenu, Pager, SearchBox, SortMenu, Th, rowMotion, type FilterValue } from "@/components/ui/table";
 import { BulkBar } from "@/components/ui/bulk-bar";
 import { T } from "@/components/ui/motion";
 import { ProblemChip } from "@/components/maintenance/problem-chip";
@@ -113,7 +113,7 @@ function Maintenance() {
         { key: "technician", label: "Technician", options: technicians }, { key: "office", label: "Office", options: [...OFFICES] },
       ]} />
       <Button variant="primary" iconRight={Plus} onClick={() => setWoModal({ editing: null })}>New Work Order</Button>
-      <Button variant="dark" iconRight={ArrowDown} onClick={() => doExport("maintenance-queue.csv", ["Work order", "Asset", "Problem", "Summary", "Technician", "Stage", "Promised"], rows.map((w) => [w.id, L.asset.get(w.assetId)?.name ?? "", w.problem, w.summary, w.technician, w.stage, w.promisedOn ?? ""]))}>Export</Button>
+      <ExportButton onPick={(fmt) => doExport("maintenance-queue.csv", ["Work order", "Asset", "Problem", "Summary", "Technician", "Stage", "Promised"], rows.map((w) => [w.id, L.asset.get(w.assetId)?.name ?? "", w.problem, w.summary, w.technician, w.stage, w.promisedOn ?? ""]), fmt)} />
     </div>
   );
 
@@ -169,7 +169,7 @@ function Maintenance() {
                 </AnimatePresence>
               </div>
               <button onClick={() => setWoModal({ editing: null })} aria-label="New work order" className="group flex items-center h-12 w-full px-3 border-b border-line hover:bg-tint cursor-pointer transition-colors">
-                <Plus size={18} className="transition-transform duration-200 group-hover:rotate-90" /><span className="ml-3 t-b2 text-ink-2 opacity-0 group-hover:opacity-100 transition-opacity">New work order</span>
+                <Plus size={18} /><span className="ml-3 t-b2 text-ink-2 opacity-0 group-hover:opacity-100 transition-opacity">New work order</span>
               </button>
               <div className="flex items-center h-12 px-4 border-b border-line">
                 <span className="text-[16px] font-semibold tnum">Showing {shown.length} of {rows.length} open</span>

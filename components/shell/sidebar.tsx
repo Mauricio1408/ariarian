@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-import { Bell, Box, Clock, Coins, LayoutGrid, PanelLeft, RotateCcw, Settings, User, UserRound, Inbox, Wrench } from "lucide-react";
+import { Bell, Box, Clock, Coins, LayoutGrid, LogOut, PanelLeft, PanelLeftOpen, RotateCcw, Settings, User, UserRound, Inbox, Wrench } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
@@ -47,30 +47,34 @@ export function Sidebar() {
 
   return (
     <motion.aside
-      animate={{ width: collapsed ? 84 : 308 }}
+      animate={{ width: collapsed ? 160 : 308 }}
       transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
       className="sticky top-0 h-screen shrink-0 border-r border-line bg-page flex flex-col z-20 no-print"
     >
-      {/* Brand */}
-      <div className="h-[84px] dash-b flex items-center px-5 gap-3 shrink-0">
-        <Link href="/" className="flex items-center gap-3 min-w-0 focus-ring rounded-md">
-          <span className="grid place-items-center size-[30px] rounded-[7px] bg-brand-100 shrink-0">
+      {/* Brand — collapsed (Figma Sidebar · State=Compressed 121:788): the logo doubles as the expand control */}
+      <div className={cn("h-[84px] dash-b flex items-center shrink-0", collapsed ? "justify-center" : "px-5 gap-3")}>
+        {collapsed ? (
+          <button onClick={() => setCollapsed(false)} aria-label="Expand sidebar" title="Expand sidebar"
+            className="group relative grid place-items-center size-[34px] rounded-[8px] bg-brand-100 cursor-pointer focus-ring">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/img/logo.svg" alt="" width={20} height={20} />
-          </span>
-          <AnimatePresence initial={false}>
-            {!collapsed && (
-              <motion.span initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6, transition: { duration: 0.1 } }} transition={T.state}
-                className="text-[20px] tracking-[-0.01em] whitespace-nowrap">
-                DOST Ari<span className="text-brand-500">Arian</span>
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </Link>
-        <motion.button onClick={() => setCollapsed(!collapsed)} whileTap={{ scale: 0.9 }} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className={cn("grid place-items-center size-8 rounded-md text-ink-2 hover:text-ink hover:bg-white cursor-pointer focus-ring", collapsed ? "absolute left-[26px] top-[70px] bg-white border border-line shadow-raised size-7" : "ml-auto")}>
-          <PanelLeft size={20} strokeWidth={1.75} />
-        </motion.button>
+            <img src="/img/logo.svg" alt="" width={20} height={20} className="transition-opacity duration-[120ms] group-hover:opacity-0 group-focus-visible:opacity-0" />
+            <PanelLeftOpen size={20} strokeWidth={1.75} className="absolute text-ink opacity-0 transition-opacity duration-[120ms] group-hover:opacity-100 group-focus-visible:opacity-100" />
+          </button>
+        ) : (
+          <>
+            <Link href="/" className="flex items-center gap-3 min-w-0 focus-ring rounded-md">
+              <span className="grid place-items-center size-[30px] rounded-[7px] bg-brand-100 shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/img/logo.svg" alt="" width={20} height={20} />
+              </span>
+              <span className="text-[20px] tracking-[-0.01em] whitespace-nowrap">DOST Ari<span className="text-brand-500">Arian</span></span>
+            </Link>
+            <button onClick={() => setCollapsed(true)} aria-label="Collapse sidebar" title="Collapse sidebar"
+              className="ml-auto grid place-items-center size-8 rounded-md text-ink-2 hover:text-ink hover:bg-white transition-colors duration-[120ms] cursor-pointer focus-ring">
+              <PanelLeft size={20} strokeWidth={1.75} />
+            </button>
+          </>
+        )}
       </div>
 
       <Section label="Main Navigation" collapsed={collapsed}>
@@ -103,16 +107,20 @@ export function Sidebar() {
               <MenuButton icon={RotateCcw} onClick={() => { dispatch({ type: "reset" }); setMenu(false); toast({ title: "Demo data reset", body: "Every screen is back to March 14, 2026", tone: "good" }); }}>
                 Reset demo data
               </MenuButton>
+              <div className="h-px bg-line my-1" />
+              <MenuButton icon={LogOut} onClick={() => { setMenu(false); dispatch({ type: "logout" }); router.replace("/login"); }}>
+                Log out
+              </MenuButton>
             </motion.div>
           )}
         </AnimatePresence>
         <motion.button onClick={() => setMenu((m) => !m)} whileTap={{ scale: 0.98 }}
-          className={cn("w-full flex items-center gap-2.5 rounded-[10px] border border-ink/80 bg-white/40 hover:bg-white transition-colors duration-[120ms] cursor-pointer focus-ring text-left",
-            collapsed ? "p-1.5 justify-center" : "px-2.5 py-2")}>
+          className={cn("flex items-center gap-2.5 rounded-[10px] cursor-pointer focus-ring text-left transition-colors duration-[120ms]",
+            collapsed ? "mx-auto p-1.5 justify-center hover:bg-white" : "w-full px-2.5 py-2 border border-ink/80 bg-white/40 hover:bg-white")}>
           <Avatar src={me.avatar} name={me.name} size={28} />
           {!collapsed && (
             <span className="min-w-0">
-              <motion.span key={me.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={T.state} className="block text-[15px] font-semibold leading-tight truncate">{me.name}</motion.span>
+              <span className="block text-[15px] font-semibold leading-tight truncate">{me.name}</span>
               <span className="block text-[12px] text-ink-2 truncate">{me.email}</span>
             </span>
           )}
@@ -125,7 +133,7 @@ export function Sidebar() {
 function Section({ label, collapsed, children }: { label: string; collapsed: boolean; children: React.ReactNode }) {
   return (
     <div className="px-3.5 pt-7 pb-6">
-      <p className={cn("t-b2 text-ink-2 px-[5px] mb-4 h-5 whitespace-nowrap transition-opacity duration-200", collapsed && "opacity-0")}>{label}</p>
+      <p className={cn("t-b2 text-ink-2 px-[5px] mb-4 h-5 whitespace-nowrap", collapsed && "text-center px-0")}>{label}</p>
       <nav className="flex flex-col gap-2">{children}</nav>
     </div>
   );
@@ -139,12 +147,12 @@ function NavItem({ item, active, collapsed, group }: { item: Item; active: boole
       <I size={24} strokeWidth={1.5} className="relative shrink-0" />
       {!collapsed && <span className={cn("relative whitespace-nowrap", active ? "font-semibold" : "font-normal")}>{item.label}</span>}
       {!!item.badge && (
-        <motion.span key={item.badge} initial={{ scale: 0.6 }} animate={{ scale: 1 }} transition={T.spring}
+        <span
           className={cn("relative tnum grid place-items-center rounded-full text-[11px] font-medium",
-            collapsed ? "absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1" : "ml-auto min-w-[28px] h-[18px] px-1.5",
+            collapsed ? "absolute top-0 right-[34px] min-w-[18px] h-[18px] px-1" : "ml-auto min-w-[28px] h-[18px] px-1.5",
             item.badgeTone === "warn" ? "bg-warn-soft text-warn-text" : "bg-brand-100 text-brand-600")}>
           {item.badge}
-        </motion.span>
+        </span>
       )}
     </>
   );

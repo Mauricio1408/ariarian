@@ -8,16 +8,43 @@ import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import { T } from "./motion";
 
-/** Every overlay closes on Escape (Motion Tokens.md — ON_KEY_DOWN 27). */
-function useEscape(open: boolean, onClose: () => void) {
+/**
+ * Scroll lock, reference-counted. Overlays stack (drawer → transfer modal) and close in any
+ * order; saving/restoring body.overflow per overlay left the page stuck at "hidden".
+ */
+let locks = 0;
+export function lockScroll() {
+  locks++;
+  document.body.style.overflow = "hidden";
+  return () => { locks = Math.max(0, locks - 1); if (locks === 0) document.body.style.overflow = ""; };
+}
+
+/**
+ * Every overlay closes on Escape (Motion Tokens.md — ON_KEY_DOWN 27) — but only the top-most one,
+ * so Escape on a modal opened over a drawer leaves the drawer open.
+ */
+const escapeStack: { current: () => void }[] = [];
+let escapeBound = false;
+function onEscape(e: KeyboardEvent) {
+  if (e.key !== "Escape" || !escapeStack.length) return;
+  e.stopImmediatePropagation();
+  escapeStack[escapeStack.length - 1].current();
+}
+
+export function useEscape(open: boolean, onClose: () => void) {
+  const ref = useRef(onClose);
+  useEffect(() => { ref.current = onClose; });
   useEffect(() => {
     if (!open) return;
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", h);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { window.removeEventListener("keydown", h); document.body.style.overflow = prev; };
-  }, [open, onClose]);
+    if (!escapeBound) { window.addEventListener("keydown", onEscape, true); escapeBound = true; }
+    escapeStack.push(ref);
+    const unlock = lockScroll();
+    return () => {
+      const i = escapeStack.lastIndexOf(ref);
+      if (i >= 0) escapeStack.splice(i, 1);
+      unlock();
+    };
+  }, [open]);
 }
 
 function Portal({ children }: { children: React.ReactNode }) {
@@ -51,7 +78,7 @@ export function Modal({ open, onClose, children, className, label, shake }: {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.98, y: 6, transition: { duration: 0.16 } }}
                 transition={T.overlay}>
-                <motion.div animate={controls} className={cn("relative bg-white rounded-[20px] shadow-overlay max-h-[calc(100vh-48px)] overflow-auto", className)}>
+                <motion.div animate={controls} className={cn("relative bg-white rounded-[20px] shadow-overlay max-h-[calc(100vh-48px)] overflow-auto scroll-slim", className)}>
                   {children}
                 </motion.div>
               </motion.div>
@@ -89,7 +116,7 @@ export function Drawer({ open, onClose, children, width = 480, label, className 
 
 export function CloseButton({ onClick, className }: { onClick: () => void; className?: string }) {
   return (
-    <motion.button onClick={onClick} aria-label="Close" whileHover={{ rotate: 90 }} whileTap={{ scale: 0.88 }} transition={T.state}
+    <motion.button onClick={onClick} aria-label="Close" whileTap={{ scale: 0.92 }} transition={T.hover}
       className={cn("grid place-items-center size-8 rounded-full text-ink hover:bg-tint cursor-pointer focus-ring", className)}>
       <X size={20} strokeWidth={1.75} />
     </motion.button>

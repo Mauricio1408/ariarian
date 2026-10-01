@@ -1,21 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AssetFormModal } from "@/components/assets/asset-form-modal";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowDown, Box, Calendar, ChevronDown, ChevronLeft, ChevronRight, Clock, Pencil, Shield, Tag, User } from "lucide-react";
+import { Box, Calendar, ChevronDown, ChevronLeft, ChevronRight, Clock, Pencil, Shield, Tag, User } from "lucide-react";
 import { useLookups, useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { ASSET_CATEGORY } from "@/lib/types";
 import { shortDate } from "@/lib/format";
 import { useExport } from "@/lib/use-export";
 import { Page, PageTitle } from "@/components/shell/topbar";
-import { Avatar, Button, CategoryChip, Thumb } from "@/components/ui/primitives";
-import { FilterChips, FilterMenu, Pager, SearchBox, SortMenu, Th, rowMotion, type FilterValue } from "@/components/ui/table";
+import { Avatar, CategoryChip, Thumb } from "@/components/ui/primitives";
+import { ExportButton, FilterChips, FilterMenu, Pager, SearchBox, SortMenu, Th, rowMotion, type FilterValue } from "@/components/ui/table";
 import { T } from "@/components/ui/motion";
-import { useRouter } from "next/navigation";
 
 const COLS = "grid-cols-[56px_224px_140px_156px_180px_196px_1fr]";
-const DEPT: Record<string, string> = { "Central Office": "Central Office", "Regional Office VI": "Regional Office VI", "Regional Office XI": "Regional Office XI", "Regional Office III": "Regional Office III", "Logistics Center": "Regional Office VI" };
 const ACTION_TONE: Record<string, string> = {
   Transferred: "text-brand-600", Resolved: "text-good-text", Removed: "text-bad-text", Reported: "text-warn-text",
   "Issued PAR": "text-brand-700", "Issued ICS": "text-brand-700", Registered: "text-ink-2", Updated: "text-ink-2", Audited: "text-ink-2",
@@ -24,13 +23,13 @@ const ACTION_TONE: Record<string, string> = {
 export default function AuditLogPage() {
   const { state } = useStore();
   const L = useLookups();
-  const router = useRouter();
   const doExport = useExport();
   const [q, setQ] = useState("");
   const [filters, setFilters] = useState<FilterValue>({});
   const [sort, setSort] = useState<{ key: "date" | "name"; dir: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(1);
   const [per, setPer] = useState(10);
+  const [viewing, setViewing] = useState<string | null>(null);
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -57,12 +56,12 @@ export default function AuditLogPage() {
           <SearchBox value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search by Asset Name, Tag, or Description" className="w-[440px]" />
           <div className="ml-24"><Pager page={p} pages={pages} onPage={setPage} /></div>
           <div className="ml-auto flex items-center gap-3">
-            <SortMenu value={sort} onChange={setSort} options={[{ key: "date", label: "Date" }, { key: "name", label: "Asset name" }]} />
+            <SortMenu value={sort} onChange={setSort} options={[{ key: "name", label: "Name", icon: Pencil }, { key: "date", label: "Date", icon: Clock }]} />
             <FilterMenu value={filters} onChange={(v) => { setFilters(v); setPage(1); }} groups={[
               { key: "action", label: "Action", options: ["Registered", "Transferred", "Resolved", "Reported", "Updated", "Issued PAR", "Issued ICS", "Removed", "Audited"] },
               { key: "type", label: "Type", options: [...ASSET_CATEGORY] },
             ]} />
-            <Button variant="dark" iconRight={ArrowDown} onClick={() => doExport("audit-log.csv", ["Date", "Action", "Asset", "Serial", "Type", "By", "Note"], rows.map(({ e, a, by }) => [e.date, e.action, a?.name ?? e.assetId, a?.serial ?? "", a?.category ?? "", by?.name ?? "", e.note ?? ""]))}>Export</Button>
+            <ExportButton onPick={(fmt) => doExport("audit-log.csv", ["Date", "Action", "Asset", "Serial", "Type", "By", "Note"], rows.map(({ e, a, by }) => [e.date, e.action, a?.name ?? e.assetId, a?.serial ?? "", a?.category ?? "", by?.name ?? "", e.note ?? ""]), fmt)} />
           </div>
         </div>
         <FilterChips value={filters} onChange={setFilters} />
@@ -72,7 +71,7 @@ export default function AuditLogPage() {
         <div className="min-h-[200px]">
           <AnimatePresence mode="popLayout" initial={false}>
             {shown.map(({ e, a, by }, i) => (
-              <motion.div key={e.id} {...rowMotion(i)} onClick={() => a && router.push(`/assets?asset=${a.id}`)}
+              <motion.div key={e.id} {...rowMotion(i)} onClick={() => a && setViewing(a.id)}
                 className={cn("relative grid items-center h-[60px] px-3 border-b border-line cursor-pointer transition-colors duration-[120ms] hover:bg-tint", COLS)}>
                 {e.fresh && <motion.span initial={{ opacity: 0.9 }} animate={{ opacity: 0 }} transition={{ duration: 2.4, delay: 0.4 }} className="absolute inset-0 bg-brand-100 pointer-events-none" />}
                 <span className="relative t-b1 tnum pl-2">{(p - 1) * per + i + 1}</span>
@@ -83,7 +82,7 @@ export default function AuditLogPage() {
                 </span>
                 <span className="relative t-b1 tnum">{a?.serial ?? "—"}</span>
                 <span className="relative">{a && <CategoryChip category={a.category} />}</span>
-                <span className="relative t-b1">{a ? DEPT[a.office] : "—"}</span>
+                <span className="relative t-b1">{a ? a.department.replace(/ (.*)$/, "") : "—"}</span>
                 <span className="relative flex items-center gap-2.5 min-w-0">
                   <Avatar src={by?.avatar} name={by?.name ?? "?"} size={30} />
                   <span className="min-w-0"><span className="block text-[15px] font-semibold truncate">{by?.name}</span><span className="block t-b3 text-ink-2 truncate">{by?.position.replace("Administrative Officer", "Admin").replace("Administrative Aide VI", "Admin I")}</span></span>
@@ -107,6 +106,7 @@ export default function AuditLogPage() {
           </div>
         </div>
       </section>
+      <AssetFormModal open={!!viewing} mode="view" asset={state.assets.find((x) => x.id === viewing) ?? null} onClose={() => setViewing(null)} />
     </Page>
   );
 }

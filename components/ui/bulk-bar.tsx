@@ -13,7 +13,7 @@ export function BulkBar({ count, actions, onClear }: { count: number; actions: {
         <motion.div initial={{ y: 80, opacity: 0, x: "-50%" }} animate={{ y: 0, opacity: 1, x: "-50%" }} exit={{ y: 80, opacity: 0, x: "-50%" }} transition={T.spring}
           className="fixed bottom-6 left-[calc(50%+154px)] z-30 flex items-center gap-1.5 rounded-xl bg-[#111] text-white pl-4 pr-2 py-2 shadow-overlay no-print">
           <span className="text-[15px] pr-3 border-r border-white/20 mr-1 tnum whitespace-nowrap">
-            <motion.span key={count} initial={{ y: -8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={T.state} className="inline-block">{count}</motion.span> selected
+            {count} selected
           </span>
           {actions.map((a) => (
             <motion.button key={a.label} whileTap={{ scale: 0.96 }} onClick={a.run}

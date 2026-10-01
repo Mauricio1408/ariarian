@@ -73,7 +73,7 @@ export function EmployeeDrawer({ employeeId, onClose, onTransfer, onEdit }: { em
               </button>
             ))}
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto scroll-slim">
             <AnimatePresence mode="wait" initial={false}>
               <motion.div key={tab} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={T.swap}>
                 {tab === "assets" && (

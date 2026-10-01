@@ -3,10 +3,11 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowDown, Box, CircleDot, FileText, Loader, Maximize2, Pencil, Plus, Repeat, Search, Send, Tag, Trash2, Upload } from "lucide-react";
+import { Box, CircleDot, FileText, Loader, Maximize2, Pencil, Plus, Repeat, Search, Send, Tag, Trash2, Upload } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { ASSET_CATEGORY, OPERATIONAL_STATUS, PHYSICAL_CONDITION } from "@/lib/types";
+import { CATEGORY_ICON } from "@/components/ui/primitives";
 import type { Asset } from "@/lib/types";
 import { AGENCIES } from "@/lib/seed";
 import { formType } from "@/lib/selectors";
@@ -14,11 +15,12 @@ import { phpExact } from "@/lib/format";
 import { useExport } from "@/lib/use-export";
 import { Page, PageTitle } from "@/components/shell/topbar";
 import { Button, CategoryChip, Checkbox, IconButton, OPERATIONAL_TEXT, Skeleton, Thumb } from "@/components/ui/primitives";
-import { FilterChips, FilterMenu, Pager, SearchBox, SortMenu, Th, rowMotion, type FilterValue } from "@/components/ui/table";
+import { ExportButton, FilterChips, FilterMenu, Pager, SearchBox, SortMenu, Th, rowMotion, type FilterValue } from "@/components/ui/table";
 import { T } from "@/components/ui/motion";
 import { AssetDrawer } from "@/components/assets/asset-drawer";
 import { TransferModal } from "@/components/assets/transfer-modal";
-import { AssetFormModal } from "@/components/assets/asset-form-modal";
+import { AssetFormModal, DeleteAssetFlow } from "@/components/assets/asset-form-modal";
+import type { ExportFormat } from "@/lib/export";
 import { BulkBar } from "@/components/ui/bulk-bar";
 
 const PER = 10;
@@ -55,6 +57,7 @@ function Registry() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [transfer, setTransfer] = useState<string[] | null>(null);
   const [form, setForm] = useState<{ asset: Asset | null } | null>(null);
+  const [deleting, setDeleting] = useState<string[] | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const openId = params.get("asset");
 
@@ -95,20 +98,15 @@ function Registry() {
   const filtered = q.trim() !== "" || Object.values(filters).some((v) => v.length);
 
   const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const remove = (ids: string[]) => {
-    const removed = state.assets.filter((a) => ids.includes(a.id));
-    dispatch({ type: "removeAssets", ids });
-    setSelected(new Set());
-    toast({ title: ids.length > 1 ? `${ids.length} assets removed` : `${removed[0]?.name} removed`, body: "Recorded in the audit log", action: { label: "Undo", run: () => dispatch({ type: "restoreAssets", assets: removed }) } });
-  };
+  const remove = (ids: string[]) => setDeleting(ids);
   const issue = (a: Asset) => {
     if (!a.custodianId) { toast({ title: "Assign a custodian first", body: "A PAR or ICS is issued to a person", tone: "bad" }); return; }
     const ids = issueForms(a.custodianId, [a.id]);
     toast({ title: `${formType(a)} issued for ${a.name}`, body: `${ids[0]} • ₱50,000 threshold applied`, tone: "good" });
     router.push(`/forms/${ids[0]}`);
   };
-  const exportRows = (list: Asset[]) => doExport("asset-registry.csv", ["Property No.", "Name", "Category", "Serial", "Operational", "Physical", "Agency", "Office", "Cost"],
-    list.map((a) => [a.id, a.name, a.category, a.serial, a.operational, a.condition, a.agency, a.office, a.cost]));
+  const exportRows = (list: Asset[], fmt: ExportFormat = "csv") => doExport("asset-registry", ["Property No.", "Name", "Category", "Serial", "Operational", "Physical", "Agency", "Office", "Cost"],
+    list.map((a) => [a.id, a.name, a.category, a.serial, a.operational, a.condition, a.agency, a.office, a.cost]), fmt);
 
   return (
     <>
@@ -119,15 +117,15 @@ function Registry() {
           <SearchBox value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search by asset name, serial, or tag" className="w-[440px]" />
           <div className="ml-6"><Pager page={p} pages={pages} onPage={(n) => { setPage(n); load(); }} /></div>
           <div className="ml-auto flex items-center gap-[18px]">
-            <SortMenu value={sort} onChange={setSort} options={[{ key: "name", label: "Asset name" }, { key: "category", label: "Asset type" }, { key: "serial", label: "Serial ID" }, { key: "operational", label: "Operational" }, { key: "condition", label: "Physical condition" }, { key: "cost", label: "Value" }]} />
+            <SortMenu value={sort} onChange={setSort} options={[{ key: "name", label: "Name", icon: Pencil }, { key: "category", label: "Asset type", icon: Box }, { key: "serial", label: "Serial ID", icon: Tag }, { key: "operational", label: "Operational", icon: CircleDot }, { key: "condition", label: "Physical condition", icon: Box }, { key: "cost", label: "Value", icon: Tag }]} />
             <FilterMenu value={filters} onChange={(v) => { setFilters(v); setPage(1); }} groups={[
-              { key: "category", label: "Asset type", options: [...ASSET_CATEGORY] },
+              { key: "category", label: "Asset type", options: [...ASSET_CATEGORY], icons: CATEGORY_ICON },
               { key: "status", label: "Operational", options: OPERATIONAL_STATUS.slice(0, 4) as unknown as string[] },
               { key: "condition", label: "Physical", options: [...PHYSICAL_CONDITION] },
               { key: "agency", label: "Agency", options: AGENCIES.map((g) => g.code) },
             ]} />
             <Button variant="primary" iconRight={Plus} onClick={() => setForm({ asset: null })}>Add Asset</Button>
-            <Button variant="dark" iconRight={ArrowDown} onClick={() => exportRows(rows)}>Export</Button>
+            <ExportButton onPick={(f) => exportRows(rows, f)} />
           </div>
         </div>
         <FilterChips value={filters} onChange={(v) => { setFilters(v); setPage(1); }} />
@@ -190,7 +188,7 @@ function Registry() {
         {assets.length > 0 && (
           <>
             <button onClick={() => setForm({ asset: null })} aria-label="Add asset" className="group flex items-center h-12 w-full px-3 border-b border-line text-ink hover:bg-tint cursor-pointer transition-colors">
-              <Plus size={18} className="transition-transform duration-200 group-hover:rotate-90" /><span className="ml-3 t-b2 text-ink-2 opacity-0 group-hover:opacity-100 transition-opacity">Add asset</span>
+              <Plus size={18} /><span className="ml-3 t-b2 text-ink-2 opacity-0 group-hover:opacity-100 transition-opacity">Add asset</span>
             </button>
             <div className="flex items-center h-12 px-4 border-b border-line">
               <span className="text-[16px] font-semibold tnum">Showing {shown.length} of {rows.length}{filtered ? ` (filtered from ${assets.length})` : ""}</span>
@@ -215,6 +213,7 @@ function Registry() {
 
       <AssetDrawer assetId={openId} onClose={() => setParam("asset", null)} onTransfer={(id) => setTransfer([id])} />
       <TransferModal open={!!transfer} assetIds={transfer ?? []} onClose={() => setTransfer(null)} onDone={() => setSelected(new Set())} />
+      <DeleteAssetFlow assetIds={deleting} onClose={() => setDeleting(null)} onDeleted={() => { setSelected(new Set()); setParam("asset", null); }} />
       <AssetFormModal open={!!form} asset={form?.asset ?? null} onClose={() => setForm(null)}
         onSaved={(a, isNew) => {
           if (isNew) { setQ(""); setFilters({}); setSort(null); setPage(1); }

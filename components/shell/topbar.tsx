@@ -14,29 +14,23 @@ export function Topbar({ crumb, icon: I }: { crumb: string; icon: LucideIcon }) 
   const unread = state.notifications.some((n) => !n.read);
   return (
     <header className="h-[84px] dash-b flex items-center gap-4 pl-[22px] pr-5 no-print">
-      <motion.p key={crumb} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={T.state} className="flex items-center gap-4 text-[16px] text-ink">
+      <p className="flex items-center gap-4 text-[16px] text-ink">
         {crumb} <I size={20} strokeWidth={1.75} />
-      </motion.p>
+      </p>
       <div className="ml-auto flex items-center gap-4">
-        <TopIcon label="Notifications" onClick={() => setNotificationsOpen(true)} icon={Bell} dot={unread} wiggle />
-        <TopIcon label="Settings" onClick={() => openSettings("Profile")} icon={Settings} spin />
+        <TopIcon label="Notifications" onClick={() => setNotificationsOpen(true)} icon={Bell} dot={unread} />
+        <TopIcon label="Settings" onClick={() => openSettings("Profile")} icon={Settings} />
       </div>
     </header>
   );
 }
 
-function TopIcon({ icon: I, label, onClick, dot, wiggle, spin }: { icon: LucideIcon; label: string; onClick: () => void; dot?: boolean; wiggle?: boolean; spin?: boolean }) {
+function TopIcon({ icon: I, label, onClick, dot }: { icon: LucideIcon; label: string; onClick: () => void; dot?: boolean }) {
   return (
-    <motion.button aria-label={label} title={label} onClick={onClick}
-      whileHover={wiggle ? { rotate: [0, -14, 12, -8, 0], transition: { duration: 0.5 } } : spin ? { rotate: 60 } : undefined}
-      whileTap={{ scale: 0.9 }} transition={T.state}
-      className="relative grid place-items-center size-9 rounded-full text-ink hover:bg-white cursor-pointer focus-ring">
+    <motion.button aria-label={label} title={label} onClick={onClick} whileTap={{ scale: 0.94 }} transition={T.hover}
+      className="relative grid place-items-center size-9 rounded-full text-ink hover:bg-white transition-colors duration-[120ms] cursor-pointer focus-ring">
       <I size={24} strokeWidth={1.9} />
-      {dot && (
-        <span className="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-bad-chart ring-2 ring-page">
-          <span className={cn("absolute inset-0 rounded-full bg-bad-chart animate-ping opacity-60")} />
-        </span>
-      )}
+      {dot && <span className="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-bad-chart ring-2 ring-page" />}
     </motion.button>
   );
 }

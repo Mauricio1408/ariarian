@@ -32,6 +32,9 @@ export interface Employee {
   email: string;
   position: string;
   office: string;
+  department: string;
+  contact?: string;
+  address?: string;
   status: EmployeeStatus;
   avatar?: string;
   lastAudit?: string;
@@ -47,6 +50,7 @@ export interface Asset {
   category: AssetCategory;
   agency: string;        // agency code
   office: string;
+  department: string;    // DOST service (OSEC, PES, FMS, AS…)
   room: string;
   address: string;
   custodianId: string | null;
@@ -59,6 +63,7 @@ export interface Asset {
   warrantyUrl?: string;
   photo?: string;
   lastAudit?: string;
+  documents?: { name: string; size: number; addedOn: string }[];
 }
 
 export interface WorkOrder {
@@ -112,6 +117,16 @@ export interface PropertyForm {
   issuedOn: string;
   issuedBy: string;
 }
+
+/** DOST services — Figma popup 1964:9875 (Financial Reports · Department filter). */
+export const DEPARTMENTS = [
+  "Office of the Secretary (OSEC)", "Undersecretaries’ Offices", "Planning and Evaluation Service (PES)",
+  "Financial and Management Service (FMS)", "Administrative Service (AS)", "Internal Audit Service (IAS)",
+  "Legal Service (LS)", "Science and Technology Information Institute (STII)",
+  "Technology Application and Promotion Institute (TAPI)", "International Cooperation Unit",
+] as const;
+
+export interface Session { employeeId: string; remember: boolean }
 
 export interface Settings {
   twoFactor: boolean;

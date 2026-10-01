@@ -33,7 +33,7 @@ export function DashCard({ id, icon: I, title, onToggle, expanded, children, cla
         <I size={expanded ? 30 : 26} strokeWidth={1.75} />
         <h2 className={expanded ? "t-h2 font-semibold" : "t-h3"}>{title}</h2>
         <motion.button onClick={onToggle} aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
-          whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} transition={T.hover}
+          whileTap={{ scale: 0.94 }} transition={T.hover}
           className="ml-auto grid place-items-center size-9 rounded-md hover:bg-tint cursor-pointer focus-ring">
           {expanded ? <Minimize2 size={28} strokeWidth={1.6} /> : <Maximize2 size={22} strokeWidth={1.75} />}
         </motion.button>

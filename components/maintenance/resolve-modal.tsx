@@ -110,14 +110,12 @@ export function ResolveModal({ woId, onClose }: { woId: string | null; onClose: 
 
 function Option({ icon: I, label, on, onClick }: { icon: LucideIcon; label: string; on: boolean; onClick: () => void }) {
   return (
-    <motion.button onClick={onClick} whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }} transition={T.hover}
-      className={cn("relative h-[84px] rounded-lg bg-white flex flex-col items-center justify-center gap-2 cursor-pointer transition-[box-shadow,color] duration-200",
-        on ? "shadow-[0_0_0_2px_var(--color-brand-500),0_8px_20px_-6px_rgb(0_173_239/0.35)] text-brand-700" : "shadow-[0_0_14px_rgb(0_0_0/0.08)] text-ink-2 hover:text-ink")}>
+    <motion.button onClick={onClick} whileTap={{ scale: 0.98 }} transition={T.hover}
+      className={cn("relative h-[84px] rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer transition-[box-shadow,color,background-color] duration-200",
+        on ? "bg-good-soft shadow-[0_0_0_2px_var(--color-good-text)] text-ink-2" : "bg-white shadow-[0_0_14px_rgb(0_0_0/0.08)] text-ink-2 hover:text-ink")}>
       <I size={20} strokeWidth={1.5} />
       <span className="text-[13px] font-medium">{label}</span>
-      <AnimatePresence>{on && (
-        <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={T.spring} className="absolute top-2 right-2 grid place-items-center size-[18px] rounded-full bg-brand-500 text-white"><Check size={11} strokeWidth={3} /></motion.span>
-      )}</AnimatePresence>
+
     </motion.button>
   );
 }

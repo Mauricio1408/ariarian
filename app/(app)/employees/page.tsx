@@ -3,7 +3,7 @@
 import { Suspense, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowDown, Box, Briefcase, ChevronDown, ChevronLeft, ChevronRight, Folder, Hash, Loader, MoreHorizontal, PhilippinePeso, Plus, User } from "lucide-react";
+import { Box, Briefcase, ChevronDown, ChevronLeft, ChevronRight, Folder, Hash, Loader, MoreHorizontal, PhilippinePeso, Plus, User } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { CAPITALISATION_THRESHOLD } from "@/lib/types";
@@ -13,7 +13,7 @@ import { php } from "@/lib/format";
 import { useExport } from "@/lib/use-export";
 import { Page, PageTitle } from "@/components/shell/topbar";
 import { Avatar, Button, Checkbox, CountUp, Pill, Tabs } from "@/components/ui/primitives";
-import { FilterChips, FilterMenu, Pager, SearchBox, SortMenu, Th, rowMotion, type FilterValue } from "@/components/ui/table";
+import { ExportButton, FilterChips, FilterMenu, Pager, SearchBox, SortMenu, Th, rowMotion, type FilterValue } from "@/components/ui/table";
 import { KpiCard } from "@/components/ui/kpi";
 import { BulkBar } from "@/components/ui/bulk-bar";
 import { T } from "@/components/ui/motion";
@@ -123,10 +123,10 @@ function Employees() {
         <SearchBox value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search by name, employee ID, or office" className="w-[440px]" />
         <div className="ml-6"><Pager page={p} pages={pages} onPage={setPage} /></div>
         <div className="ml-auto flex items-center gap-[18px]">
-          <SortMenu value={sort} onChange={setSort} options={[{ key: "name", label: "Name" }, { key: "office", label: "Office" }, { key: "assets", label: "Assets held" }, { key: "value", label: "Accountable value" }]} />
+          <SortMenu value={sort} onChange={setSort} options={[{ key: "name", label: "Name", icon: User }, { key: "office", label: "Office", icon: Folder }, { key: "assets", label: "Assets held", icon: Box }, { key: "value", label: "Accountable", icon: PhilippinePeso }]} />
           <FilterMenu value={filters} onChange={(v) => { setFilters(v); setPage(1); }} groups={[{ key: "office", label: "Office", options: [...OFFICES] }, { key: "holding", label: "Custody", options: ["Holds assets", "No assets"] }]} />
           <Button variant="primary" iconRight={Plus} onClick={() => setForm({ e: null })}>Add Employee</Button>
-          <Button variant="dark" iconRight={ArrowDown} onClick={() => doExport("employees.csv", ["Employee ID", "Name", "Position", "Office", "Assets", "Accountable", "Status"], rows.map((e) => [e.id, e.name, e.position, e.office, stats.get(e.id)?.n ?? 0, stats.get(e.id)?.v ?? 0, e.status]))}>Export</Button>
+          <ExportButton onPick={(fmt) => doExport("employees.csv", ["Employee ID", "Name", "Position", "Office", "Assets", "Accountable", "Status"], rows.map((e) => [e.id, e.name, e.position, e.office, stats.get(e.id)?.n ?? 0, stats.get(e.id)?.v ?? 0, e.status]), fmt)} />
         </div>
       </div>
       <FilterChips value={filters} onChange={setFilters} />

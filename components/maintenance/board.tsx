@@ -106,7 +106,7 @@ function Card({ wo, i, dragging, onDragStart, onDrag, onDrop, onOpen }: {
     <motion.div layout layoutId={`wo-${wo.id}`}
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { ...T.state, delay: i * 0.03 } }} exit={{ opacity: 0, scale: 0.95 }}
       drag dragSnapToOrigin dragElastic={0.9} dragMomentum={false}
-      whileDrag={{ scale: 1.04, rotate: 2, boxShadow: "0 24px 48px -12px rgb(5 18 18 / 0.28)", zIndex: 40, cursor: "grabbing" }}
+      whileDrag={{ scale: 1.02, boxShadow: "0 24px 48px -12px rgb(5 18 18 / 0.28)", zIndex: 40, cursor: "grabbing" }}
       onDragStart={() => { moved.current = true; onDragStart(); }}
       onDrag={(e) => { const p = e as PointerEvent; onDrag(p.clientX, p.clientY); }}
       onDragEnd={(e) => { const p = e as PointerEvent; onDrop(p.clientX, p.clientY); setTimeout(() => { moved.current = false; }, 0); }}

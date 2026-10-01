@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ export function SettingsModal() {
   const { settingsTab, openSettings } = useShell();
   const close = () => openSettings(null);
   const { state, dispatch, toast, me } = useStore();
+  const router = useRouter();
   const [draft, setDraft] = useState<Settings>(state.settings);
   const [saving, setSaving] = useState(false);
   const [lastOpen, setLastOpen] = useState<SettingsTab | null>(null);
@@ -61,7 +63,7 @@ export function SettingsModal() {
           <Avatar src={me.avatar} name={me.name} size={32} />
           <div className="min-w-0">
             <p className="t-b2s truncate">{me.name}</p>
-            <button className="text-[12px] text-brand-600 hover:underline cursor-pointer" onClick={() => toast({ title: "Sign out is disabled in the prototype" })}>Sign out</button>
+            <button className="text-[12px] text-brand-600 hover:underline cursor-pointer" onClick={() => { close(); dispatch({ type: "logout" }); router.replace("/login"); }}>Sign out</button>
           </div>
         </div>
       </nav>
@@ -69,13 +71,13 @@ export function SettingsModal() {
       <div className="flex-1 flex flex-col min-w-0">
         <header className="flex items-center px-7 h-[70px] border-b border-line shrink-0">
           <AnimatePresence mode="wait" initial={false}>
-            <motion.h3 key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={T.state} className="text-[20px] font-semibold">{tab}</motion.h3>
+            <motion.h3 key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={T.state} className="text-[20px] font-semibold">{tab}</motion.h3>
           </AnimatePresence>
           <CloseButton onClick={close} className="ml-auto" />
         </header>
-        <div className="flex-1 overflow-y-auto px-7">
+        <div className="flex-1 overflow-y-auto scroll-slim px-7">
           <AnimatePresence mode="wait" initial={false}>
-            <motion.div key={tab} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={T.swap} className="py-6">
+            <motion.div key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={T.swap} className="py-6">
               {restricted ? <div className="pt-16"><PermissionDenied what={tab} compact /></div>
                 : tab === "Profile" ? <ProfileTab draft={draft} setDraft={setDraft} />
                 : tab === "General" ? <GeneralTab draft={draft} setDraft={setDraft} />
@@ -118,7 +120,7 @@ function ProfileTab({ draft, setDraft }: TabProps) {
         <p className="text-[16px] font-medium">Photo</p>
         <p className="t-b3 text-ink-2">Shown on your custodian record and in the audit log.</p>
         <div className="flex items-center gap-4 mt-4">
-          <motion.div whileHover={{ scale: 1.04 }}><Avatar src={me.avatar} name={me.name} size={64} /></motion.div>
+          <Avatar src={me.avatar} name={me.name} size={64} />
           <Button onClick={() => toast({ title: "Photo upload is mocked in the prototype" })}>Change photo</Button>
           <Button variant="ghost">Remove</Button>
         </div>

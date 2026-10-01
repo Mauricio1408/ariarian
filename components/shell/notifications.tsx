@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowLeftRight, ArrowRight, Check, ClipboardCheck, ShieldAlert, SlidersHorizontal, User, Wrench } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useStore } from "@/lib/store";
@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import type { AppNotification, NotificationKind } from "@/lib/types";
 import { AS_OF } from "@/lib/types";
 import { Tabs, Toggle } from "@/components/ui/primitives";
-import { CloseButton } from "@/components/ui/overlay";
+import { CloseButton, useEscape } from "@/components/ui/overlay";
 import { T } from "@/components/ui/motion";
 import { monthDay } from "@/lib/format";
 import { useShell } from "./shell-context";
@@ -31,12 +31,7 @@ export function NotificationsPanel() {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("all");
   const [unreadOnly, setUnreadOnly] = useState(false);
-  useEffect(() => {
-    if (!open) return;
-    const k = (e: KeyboardEvent) => { if (e.key === "Escape") setNotificationsOpen(false); };
-    window.addEventListener("keydown", k);
-    return () => window.removeEventListener("keydown", k);
-  }, [open, setNotificationsOpen]);
+  useEscape(open, () => setNotificationsOpen(false));
 
   const unread = state.notifications.filter((n) => !n.read);
   const countOf = (k: NotificationKind) => unread.filter((n) => n.kind === k).length;
@@ -73,7 +68,7 @@ export function NotificationsPanel() {
               <div className="flex items-start">
                 <div>
                   <h2 className="text-[20px] font-semibold">Notifications</h2>
-                  <p className="t-b2 text-ink-2 mt-0.5"><motion.span key={unread.length} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="inline-block tnum">{unread.length}</motion.span> unread</p>
+                  <p className="t-b2 text-ink-2 mt-0.5"><span className="tnum">{unread.length}</span> unread</p>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
                   <motion.button whileTap={{ scale: 0.96 }} disabled={!unread.length} onClick={() => dispatch({ type: "readNotifications", ids: "all" })}
@@ -96,7 +91,7 @@ export function NotificationsPanel() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto scroll-slim">
               <AnimatePresence mode="popLayout" initial={false}>
                 {groups.length === 0 && (
                   <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="py-24 text-center">
@@ -108,11 +103,11 @@ export function NotificationsPanel() {
                 {groups.map((g) => (
                   <motion.section key={g.label} layout transition={T.state}>
                     <h3 className="t-l1 text-ink-2 px-6 py-3 border-t border-line">{g.label}</h3>
-                    {g.items.map((n, i) => {
+                    {g.items.map((n) => {
                       const k = KIND[n.kind];
                       return (
-                        <motion.div key={n.id} layout initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}
-                          transition={{ ...T.state, delay: i * 0.025 }} onClick={() => dispatch({ type: "readNotifications", ids: [n.id] })}
+                        <motion.div key={n.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                          transition={T.state} onClick={() => dispatch({ type: "readNotifications", ids: [n.id] })}
                           className={cn("group relative flex gap-4 px-6 py-4 border-t border-line cursor-pointer transition-colors duration-200",
                             n.read ? "bg-white hover:bg-tint" : "bg-brand-50/70 hover:bg-brand-50")}>
                           <span className={cn("grid place-items-center size-9 rounded-full shrink-0", k.tone)}><k.icon size={17} strokeWidth={1.75} /></span>

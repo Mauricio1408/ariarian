@@ -8,21 +8,21 @@ import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { ASSET_CATEGORY } from "@/lib/types";
 import { OFFICES } from "@/lib/seed";
-import { finance, valueSeries } from "@/lib/selectors";
-import { php, phpShort } from "@/lib/format";
+import { accumulated, bookValue, finance, valueSeries } from "@/lib/selectors";
+import { php, phpShort, shortDate } from "@/lib/format";
 import { Page, PageTitle } from "@/components/shell/topbar";
 import { PermissionDenied } from "@/components/shell/permission-denied";
 import { CountUp } from "@/components/ui/primitives";
 import { KpiCard } from "@/components/ui/kpi";
-import { MenuItem, Popover } from "@/components/ui/overlay";
+import { CalendarPopup, CategoryPopup, DepartmentPopup, OptionPopup } from "@/components/ui/popups";
+import { ExportButton } from "@/components/ui/table";
+import { useExport } from "@/lib/use-export";
+import type { AssetCategory } from "@/lib/types";
+import { AS_OF } from "@/lib/types";
 import { EASE, T, stagger } from "@/components/ui/motion";
 import { LineChart } from "@/components/dashboard/charts";
 
 type Range = "1Y" | "3Y" | "5Y" | "All";
-const ACQ: { key: string; label: string; from: string }[] = [
-  { key: "any", label: "Any date", from: "0000" }, { key: "2026", label: "This year", from: "2026-01-01" },
-  { key: "3y", label: "Last 3 years", from: "2023-03-14" }, { key: "5y", label: "Last 5 years", from: "2021-03-14" },
-];
 
 export default function FinancialReportsPage() {
   const { state } = useStore();
@@ -35,47 +35,64 @@ export default function FinancialReportsPage() {
 
 function Reports() {
   const { state } = useStore();
+  const doExport = useExport();
   const [cat, setCat] = useState("All");
   const [office, setOffice] = useState("All");
-  const [acq, setAcq] = useState("any");
+  const [dept, setDept] = useState("All");
+  const [since, setSince] = useState<string | null>(null);
   const [menu, setMenu] = useState<string | null>(null);
   const [range, setRange] = useState<Range>("5Y");
   const [extra, setExtra] = useState(false);
   const [condition, setCondition] = useState("All");
 
   const assets = useMemo(() => state.assets.filter((a) =>
-    (cat === "All" || a.category === cat) && (office === "All" || a.office === office) &&
-    a.acquiredOn >= ACQ.find((x) => x.key === acq)!.from && (condition === "All" || a.condition === condition)), [state.assets, cat, office, acq, condition]);
+    (cat === "All" || a.category === cat) && (office === "All" || a.office === office) && (dept === "All" || a.department === dept) &&
+    (!since || a.acquiredOn >= since) && (condition === "All" || a.condition === condition)), [state.assets, cat, office, dept, since, condition]);
   const f = finance(assets);
   const ytd = state.workOrders.filter((w) => w.closedOn?.startsWith("2026") && assets.some((a) => a.id === w.assetId)).reduce((s, w) => s + (w.cost ?? 0), 0);
   const tco = f.total * 1.04 + ytd;
   const quarter = assets.filter((a) => a.acquiredOn >= "2026-01-01").reduce((s, a) => s + a.cost, 0);
   const years = range === "1Y" ? [2025, 2026] : range === "3Y" ? [2023, 2024, 2025, 2026] : range === "5Y" ? [2021, 2022, 2023, 2024, 2025, 2026] : [2016, 2018, 2020, 2022, 2024, 2026];
   const series = valueSeries(assets, years);
-  const filtered = cat !== "All" || office !== "All" || acq !== "any" || condition !== "All";
+  const filtered = cat !== "All" || office !== "All" || since !== null || dept !== "All" || condition !== "All";
 
   const byCat = ASSET_CATEGORY.map((c) => [c, assets.filter((a) => a.category === c).reduce((s, a) => s + a.cost, 0)] as const).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
   const byOffice = OFFICES.map((o) => [o, assets.filter((a) => a.office === o).reduce((s, a) => s + a.cost, 0)] as const).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
-  const vkey = `${cat}-${office}-${acq}-${condition}`;
+  const vkey = `${cat}-${office}-${dept}-${since}-${condition}`;
 
   return (
     <>
       <PageTitle title="Financial Reports" sub="Asset Valuation, Lifecycle Budgeting, and Investment Analysis." />
       <div className="flex items-center gap-3 -mt-2 mb-5">
-        <Chip icon={Box} label="Category" value={cat} open={menu === "cat"} onToggle={() => setMenu(menu === "cat" ? null : "cat")} onClose={() => setMenu(null)} options={["All", ...ASSET_CATEGORY]} onPick={setCat} />
-        <Chip icon={Shield} label="Department" value={office} open={menu === "off"} onToggle={() => setMenu(menu === "off" ? null : "off")} onClose={() => setMenu(null)} options={["All", ...OFFICES]} onPick={setOffice} />
-        <Chip icon={Calendar} label="Acquired" value={ACQ.find((x) => x.key === acq)!.label} open={menu === "acq"} onToggle={() => setMenu(menu === "acq" ? null : "acq")} onClose={() => setMenu(null)} options={ACQ.map((x) => x.label)} onPick={(l) => setAcq(ACQ.find((x) => x.label === l)!.key)} />
+        <Chip icon={Box} label="Category" value={cat} open={menu === "cat"} onToggle={() => setMenu(menu === "cat" ? null : "cat")}>
+          <CategoryPopup withAll open={menu === "cat"} onClose={() => setMenu(null)} value={cat as AssetCategory | "All"} onPick={setCat} />
+        </Chip>
+        <Chip icon={Shield} label="Department" value={dept === "All" ? "All" : dept.replace(/ \(.*\)$/, "")} open={menu === "dept"} onToggle={() => setMenu(menu === "dept" ? null : "dept")}>
+          <DepartmentPopup withAll open={menu === "dept"} onClose={() => setMenu(null)} value={dept} onPick={setDept} />
+        </Chip>
+        <Chip icon={Calendar} label="Acquired" value={since ? `Since ${shortDate(since)}` : "Any date"} open={menu === "acq"} onToggle={() => setMenu(menu === "acq" ? null : "acq")}>
+          <CalendarPopup open={menu === "acq"} onClose={() => setMenu(null)} value={since ?? "2026-01-01"} max={AS_OF} onDone={setSince} />
+        </Chip>
+        {office !== "All" && (
+          <button onClick={() => setOffice("All")} className="flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-brand-400 bg-brand-50 text-[14px] cursor-pointer">
+            <span className="text-ink-2">Office</span><span className="font-medium">{office}</span><X size={14} />
+          </button>
+        )}
         <AnimatePresence initial={false}>
           {extra && (
             <motion.div initial={{ opacity: 0, scale: 0.9, width: 0 }} animate={{ opacity: 1, scale: 1, width: "auto" }} exit={{ opacity: 0, scale: 0.9, width: 0 }} transition={T.state}>
-              <Chip icon={Box} label="Condition" value={condition} open={menu === "cond"} onToggle={() => setMenu(menu === "cond" ? null : "cond")} onClose={() => setMenu(null)} options={["All", "Excellent", "Fair", "Poor"]} onPick={setCondition} />
+              <Chip icon={Box} label="Condition" value={condition} open={menu === "cond"} onToggle={() => setMenu(menu === "cond" ? null : "cond")}>
+                <OptionPopup open={menu === "cond"} onClose={() => setMenu(null)} options={["All", "Excellent", "Fair", "Poor"] as const} value={condition as "All"} onPick={setCondition} width={180} />
+              </Chip>
             </motion.div>
           )}
         </AnimatePresence>
         {!extra && <motion.button whileTap={{ scale: 0.96 }} onClick={() => { setExtra(true); setMenu("cond"); }} className="flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-dashed border-ink-3 text-[14px] hover:bg-white cursor-pointer"><Plus size={14} />Add filter</motion.button>}
         <span className="ml-auto t-b2 text-ink-3 tnum">{assets.length} assets • {php(f.total)}</span>
-        <button onClick={() => { setCat("All"); setOffice("All"); setAcq("any"); setCondition("All"); setExtra(false); }} disabled={!filtered}
+        <button onClick={() => { setCat("All"); setOffice("All"); setSince(null); setDept("All"); setCondition("All"); setExtra(false); }} disabled={!filtered}
           className="flex items-center gap-1 t-b2 text-brand-600 disabled:text-ink-3 cursor-pointer disabled:cursor-default ml-4">Reset <X size={15} /></button>
+        <div className="ml-3"><ExportButton onPick={(fmt) => doExport("financial-report", ["Property No.", "Asset", "Category", "Department", "Office", "Acquired", "Cost", "Accumulated", "Book value"],
+          assets.map((a) => [a.id, a.name, a.category, a.department, a.office, a.acquiredOn, a.cost, Math.round(accumulated(a)), Math.round(bookValue(a))]), fmt)} /></div>
       </div>
 
       <div className="grid grid-cols-4 gap-5">
@@ -122,18 +139,16 @@ function Reports() {
   );
 }
 
-function Chip({ icon: I, label, value, open, onToggle, onClose, options, onPick }: { icon: LucideIcon; label: string; value: string; open: boolean; onToggle: () => void; onClose: () => void; options: string[]; onPick: (v: string) => void }) {
+function Chip({ icon: I, label, value, open, onToggle, children }: { icon: LucideIcon; label: string; value: string; open: boolean; onToggle: () => void; children: React.ReactNode }) {
   const on = value !== "All" && value !== "Any date";
   return (
     <div className="relative">
-      <motion.button whileTap={{ scale: 0.97 }} onClick={onToggle}
+      <button onClick={onToggle}
         className={cn("flex items-center gap-2 h-10 px-3.5 rounded-xl border bg-white text-[14px] cursor-pointer transition-colors whitespace-nowrap", on ? "border-brand-400 bg-brand-50" : "border-line hover:border-ink-3")}>
-        <I size={15} strokeWidth={1.75} /><span className="text-ink-2">{label}</span><motion.span key={value} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="font-medium">{value}</motion.span>
+        <I size={15} strokeWidth={1.75} /><span className="text-ink-2">{label}</span><span className="font-medium max-w-[220px] truncate">{value}</span>
         <ChevronDown size={13} className={cn("text-ink-2 transition-transform duration-200", open && "rotate-180")} />
-      </motion.button>
-      <Popover open={open} onClose={onClose} align="left">
-        {options.map((o) => <MenuItem key={o} active={o === value} onClick={() => { onPick(o); onClose(); }}>{o}</MenuItem>)}
-      </Popover>
+      </button>
+      {children}
     </div>
   );
 }
