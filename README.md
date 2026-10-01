@@ -9,6 +9,8 @@ Built from the **Version 2** page of the Figma file
 
 Next.js 16 (App Router) · React 19 · Tailwind v4 · Motion · deployed on Vercel.
 
+**Live:** https://ariarian.vercel.app — sign in with any password as `m.bergancia@dost.gov.ph` (admin) or `juandelacruz@dost.gov.ph` (custodian).
+
 ---
 
 ## What works
@@ -26,6 +28,9 @@ Next.js 16 (App Router) · React 19 · Tailwind v4 · Motion · deployed on Verc
 | Audit Log | `4666:3563` | Every action you take in the demo lands here, highlighted as *Just now* |
 | Financial Reports | `4666:3602` | Category / department / date filters recompute every figure; animated line chart |
 | Notifications, Settings | `4666:33123` `4666:33787…` | Filterable panel, mark-as-read; settings tabs with save states |
+| Sign in | `4571:30959` `4571:30785` | Log In, Request Access, Forgot Password / Reset Link Sent / Request Sent modals |
+| Asset modals | Asset Modal Overlays, `4229:14732` | Figma Add / Edit / View Asset, Delete → Successfully Deleted |
+| Popups | `1601:5423` `1601:5422` `1601:5761` `1964:9875` `1903:13802` | Sort, filter, export (Excel/CSV/PDF), department, calendar |
 | Permission denied | `4593:966` | Switch to the custodian role — Financial Reports and Export are restricted |
 | PAR / ICS | `4594:1024` `4596:1014` | Generated from live custody data; ₱50,000 threshold splits PAR and ICS; printable |
 
