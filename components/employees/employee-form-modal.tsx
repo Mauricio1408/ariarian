@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { BadgeCheck, Briefcase, Building2, ChevronDown, CircleCheck, Mail, MapPin, Phone, User, Users } from "lucide-react";
+import { ChevronDown, CircleCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { FIELD_ICON as F } from "@/lib/field-icons";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { OFFICES } from "@/lib/seed";
@@ -69,29 +70,29 @@ export function EmployeeFormModal({ open, employee, onClose }: { open: boolean; 
 
         <p className="text-[16px] text-ink-2 mt-4 mb-2">Personal Information</p>
         <div className="grid grid-cols-2 gap-x-10 gap-y-3">
-          <Cell icon={User} value={d.name} onChange={(v) => set("name", v)} placeholder="Enter full name" error={err.name} />
-          <Cell icon={Mail} type="email" value={d.email} onChange={(v) => set("email", v)} placeholder="Enter email address" error={err.email} />
-          <Cell icon={Phone} value={d.contact ?? ""} onChange={(v) => set("contact", v)} placeholder="Enter contact number" />
-          <Cell icon={Briefcase} value={d.position} onChange={(v) => set("position", v)} placeholder="Enter position" error={err.position} />
+          <Cell icon={F.person} value={d.name} onChange={(v) => set("name", v)} placeholder="Enter full name" error={err.name} />
+          <Cell icon={F.email} type="email" value={d.email} onChange={(v) => set("email", v)} placeholder="Enter email address" error={err.email} />
+          <Cell icon={F.phone} value={d.contact ?? ""} onChange={(v) => set("contact", v)} placeholder="Enter contact number" />
+          <Cell icon={F.position} value={d.position} onChange={(v) => set("position", v)} placeholder="Enter position" error={err.position} />
         </div>
 
         <p className="text-[16px] text-ink-2 mt-5 mb-2">Organizational Information</p>
         <div className="grid grid-cols-2 gap-x-10 gap-y-3">
           <div className={cn("relative", err.department && "[&>button]:border-bad-text")}>
-            <SelectCell icon={Building2} label={d.department} placeholder="Select department" onClick={() => setMenu(menu === "dept" ? null : "dept")} />
+            <SelectCell icon={F.department} label={d.department} placeholder="Select department" onClick={() => setMenu(menu === "dept" ? null : "dept")} />
             <DepartmentPopup open={menu === "dept"} onClose={() => setMenu(null)} value={d.department} onPick={(v) => set("department", v)} />
           </div>
           <div className="relative">
-            <Cell icon={Users} value={d.agencyName ?? ""} onChange={(v) => set("agencyName", v)} placeholder="Enter agency name" />
+            <Cell icon={F.agency} value={d.agencyName ?? ""} onChange={(v) => set("agencyName", v)} placeholder="Enter agency name" />
           </div>
           <div className="relative">
-            <SelectCell icon={Building2} label={d.office ? `DOST ${d.office}` : ""} placeholder="Enter office" onClick={() => setMenu(menu === "office" ? null : "office")} />
+            <SelectCell icon={F.office} label={d.office ? `DOST ${d.office}` : ""} placeholder="Enter office" onClick={() => setMenu(menu === "office" ? null : "office")} />
             <OptionPopup open={menu === "office"} onClose={() => setMenu(null)} options={OFFICES} value={d.office as (typeof OFFICES)[number]} onPick={(v) => set("office", v)} width={240} />
           </div>
-          <Cell icon={MapPin} value={d.address ?? ""} onChange={(v) => set("address", v)} placeholder="Enter address" />
+          <Cell icon={F.address} value={d.address ?? ""} onChange={(v) => set("address", v)} placeholder="Enter address" />
           {employee && (
             <div className="relative">
-              <SelectCell icon={BadgeCheck} label={d.status} placeholder="Status" onClick={() => setMenu(menu === "status" ? null : "status")} />
+              <SelectCell icon={F.status} label={d.status} placeholder="Status" onClick={() => setMenu(menu === "status" ? null : "status")} />
               <OptionPopup open={menu === "status"} onClose={() => setMenu(null)} options={EMPLOYEE_STATUS} value={d.status} onPick={(v) => set("status", v)} width={200} />
             </div>
           )}

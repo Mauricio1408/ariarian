@@ -31,20 +31,21 @@ function onEscape(e: KeyboardEvent) {
   escapeStack[escapeStack.length - 1].current();
 }
 
-export function useEscape(open: boolean, onClose: () => void) {
+/** `lock: false` for in-place layers (dropdowns) that should take Escape first without freezing the page. */
+export function useEscape(open: boolean, onClose: () => void, lock = true) {
   const ref = useRef(onClose);
   useEffect(() => { ref.current = onClose; });
   useEffect(() => {
     if (!open) return;
     if (!escapeBound) { window.addEventListener("keydown", onEscape, true); escapeBound = true; }
     escapeStack.push(ref);
-    const unlock = lockScroll();
+    const unlock = lock ? lockScroll() : () => {};
     return () => {
       const i = escapeStack.lastIndexOf(ref);
       if (i >= 0) escapeStack.splice(i, 1);
       unlock();
     };
-  }, [open]);
+  }, [open, lock]);
 }
 
 function Portal({ children }: { children: React.ReactNode }) {
@@ -128,12 +129,12 @@ export function Popover({ open, onClose, children, className, align = "right" }:
   open: boolean; onClose: () => void; children: React.ReactNode; className?: string; align?: "left" | "right";
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  useEscape(open, onClose, false);
   useEffect(() => {
     if (!open) return;
     const h = (e: MouseEvent) => { if (ref.current && !ref.current.parentElement?.contains(e.target as Node)) onClose(); };
-    const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("mousedown", h); window.addEventListener("keydown", k);
-    return () => { document.removeEventListener("mousedown", h); window.removeEventListener("keydown", k); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
   }, [open, onClose]);
   return (
     <AnimatePresence>

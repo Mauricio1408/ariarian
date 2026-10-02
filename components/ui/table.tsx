@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-import { ArrowDown, ArrowLeft, ArrowRight, Check, ChevronsUpDown, FileSpreadsheet, FileText, FileType, ListFilter, Plus, Search, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, Check, ChevronsUpDown, ListFilter, Plus, Search, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./primitives";
@@ -135,19 +135,21 @@ export function FilterMenu({ groups, value, onChange }: { groups: FilterGroup[];
 /** Figma "Overlay - Export" (1601:5761): a dark menu — Excel, CSV, PDF. */
 export function ExportButton({ onPick }: { onPick: (f: ExportFormat) => void }) {
   const [open, setOpen] = useState(false);
-  const items: { f: ExportFormat; label: string; icon: LucideIcon; tone: string }[] = [
-    { f: "excel", label: "Excel", icon: FileSpreadsheet, tone: "text-[#2fbf71]" },
-    { f: "csv", label: "CSV", icon: FileText, tone: "text-[#4fbf62]" },
-    { f: "pdf", label: "PDF", icon: FileType, tone: "text-[#ff5a4f]" },
+  // File-type marks exported from the Figma Export Option component (1344:3835)
+  const items: { f: ExportFormat; label: string; icon: string }[] = [
+    { f: "excel", label: "Excel", icon: "/img/icons/excel.svg" },
+    { f: "csv", label: "CSV", icon: "/img/icons/csv.svg" },
+    { f: "pdf", label: "PDF", icon: "/img/icons/pdf.svg" },
   ];
   return (
     <div className="relative">
       <Button variant="dark" iconRight={ArrowDown} onClick={() => setOpen((o) => !o)}>Export</Button>
       <Popover open={open} onClose={() => setOpen(false)} className="min-w-0 w-[110px] p-1 rounded-[6px] bg-[#0b0b0b] border-[#0b0b0b]">
-        {items.map(({ f, label, icon: I, tone }) => (
+        {items.map(({ f, label, icon }) => (
           <button key={f} onClick={() => { setOpen(false); onPick(f); }}
             className="w-full flex items-center gap-2.5 h-10 px-2.5 rounded-[4px] text-[15px] text-white hover:bg-white/10 cursor-pointer transition-colors duration-[120ms]">
-            <I size={20} strokeWidth={1.75} className={tone} />{label}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={icon} alt="" width={20} height={20} className="size-5 object-contain" />{label}
           </button>
         ))}
       </Popover>

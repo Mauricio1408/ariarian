@@ -51,19 +51,21 @@
   --color-bad-text: #b52503;
   --color-bad-chart: #ee6a4c;
 
-  /* Category chips (Registry v2) */
-  --color-cat-hw-bg: #ffe6df;
-  --color-cat-hw: #e2380f;
-  --color-cat-veh-bg: #fde8fb;
-  --color-cat-veh: #b3189f;
-  --color-cat-off-bg: #fff3d6;
-  --color-cat-off: #d38a00;
-  --color-cat-app-bg: #ececec;
-  --color-cat-app: #404040;
-  --color-cat-sw-bg: #dff4ff;
-  --color-cat-sw: #0b84c2;
-  --color-cat-ess-bg: #e7fbe0;
-  --color-cat-ess: #2f9a12;
+  /* Category + problem chips (Figma Table Data 633:1387) */
+  --color-cat-hw-bg: #fcece8;
+  --color-cat-hw: #b52503;
+  --color-cat-veh-bg: #fff1fd;
+  --color-cat-veh: #921980;
+  --color-cat-off-bg: #fff6e5;
+  --color-cat-off: #c47f07;
+  --color-cat-app-bg: #eeeeee;
+  --color-cat-app: #333333;
+  --color-cat-sw-bg: #e6f7fe;
+  --color-cat-sw: #00506f;
+  --color-cat-ess-bg: #efffe9;
+  --color-cat-ess: #3c901e;
+  --color-cat-oth-bg: #f2f2f2;
+  --color-cat-oth: #333333;
 
   /* Date colour tiers — colour only where there is a decision */
   --color-date-past: #5a6a75;

@@ -89,12 +89,12 @@ const CATEGORY_TONE: Record<AssetCategory, string> = {
   Appliances: "bg-cat-app-bg text-cat-app",
   Software: "bg-cat-sw-bg text-cat-sw",
   Essentials: "bg-cat-ess-bg text-cat-ess",
-  Others: "bg-brand-50 text-brand-700",
+  Others: "bg-cat-oth-bg text-cat-oth",
 };
 export function CategoryChip({ category, size = "md" }: { category: AssetCategory; size?: "sm" | "md" }) {
   const I = CATEGORY_ICON[category];
   return (
-    <span className={cn("inline-flex items-center justify-center gap-2 rounded-md", CATEGORY_TONE[category],
+    <span className={cn("inline-flex items-center justify-center gap-2 rounded-lg", CATEGORY_TONE[category],
       size === "md" ? "h-10 w-[140px] text-[16px]" : "h-6 px-2 text-[13px] gap-1.5")}>
       <I size={size === "md" ? 17 : 13} strokeWidth={1.75} />
       {category}
@@ -171,11 +171,16 @@ export function Avatar({ src, name, size = 32, ring, className }: { src?: string
   );
 }
 
+/** Small sizes read the 192px square thumbnail; larger ones the 1600px original. */
+export function thumbSrc(src: string, size: number) {
+  return size <= 96 && src.startsWith("/img/assets/") ? src.replace("/img/assets/", "/img/assets/thumb/") : src;
+}
+
 export function Thumb({ src, category, size = 28, className }: { src?: string; category: AssetCategory; size?: number; className?: string }) {
   const I = CATEGORY_ICON[category];
   return src ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt="" width={size} height={size} draggable={false} className={cn("rounded-[5px] object-cover shrink-0", className)} style={{ width: size, height: size }} />
+    <img src={thumbSrc(src, size)} decoding="async" alt="" width={size} height={size} draggable={false} className={cn("rounded-[5px] object-cover shrink-0", className)} style={{ width: size, height: size }} />
   ) : (
     <span className={cn("grid place-items-center rounded-[5px] shrink-0", CATEGORY_TONE[category], className)} style={{ width: size, height: size }}>
       <I size={size * 0.55} strokeWidth={1.75} />
@@ -267,7 +272,8 @@ export function Tabs<K extends string>({ tabs, value, onChange, id, variant = "u
             {variant === "pill" && active && <motion.span layoutId={`${id}-pill`} transition={T.spring} className="absolute inset-0 rounded-full bg-brand-500" />}
             <span className="relative">{t.label}</span>
             {t.count !== undefined && (
-              <span className={cn("relative tnum text-[12px] rounded-full px-1.5 min-w-[22px] h-[18px] grid place-items-center transition-colors duration-200",
+              <span className={cn("relative tnum text-[12px] rounded-full grid place-items-center transition-colors duration-200",
+                variant === "underline" ? "px-1.5 min-w-[22px] h-[18px]" : "-ml-1 px-0.5",
                 active && variant === "underline" ? "bg-n-500 text-white" : active ? "text-white/90" : "text-ink-2")}>{t.count}</span>
             )}
             {variant === "underline" && active && <motion.span layoutId={`${id}-line`} transition={T.spring} className="absolute -bottom-px left-0 right-0 h-[2px] bg-ink rounded-full" />}

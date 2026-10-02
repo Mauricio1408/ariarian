@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { AssetFormModal } from "@/components/assets/asset-form-modal";
 import { AnimatePresence, motion } from "motion/react";
-import { Box, Calendar, ChevronDown, ChevronLeft, ChevronRight, Clock, Pencil, Shield, Tag, User } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Clock, Pencil } from "lucide-react";
 import { useLookups, useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { ASSET_CATEGORY } from "@/lib/types";
@@ -11,10 +11,11 @@ import { shortDate } from "@/lib/format";
 import { useExport } from "@/lib/use-export";
 import { Page, PageTitle } from "@/components/shell/topbar";
 import { Avatar, CategoryChip, Thumb } from "@/components/ui/primitives";
+import { ResizableHeader, TableScroll, useColumns } from "@/components/ui/columns";
+import { FIELD_ICON as F } from "@/lib/field-icons";
 import { ExportButton, FilterChips, FilterMenu, Pager, SearchBox, SortMenu, Th, rowMotion, type FilterValue } from "@/components/ui/table";
 import { T } from "@/components/ui/motion";
 
-const COLS = "grid-cols-[56px_224px_140px_156px_180px_196px_1fr]";
 const ACTION_TONE: Record<string, string> = {
   Transferred: "text-brand-600", Resolved: "text-good-text", Removed: "text-bad-text", Reported: "text-warn-text",
   "Issued PAR": "text-brand-700", "Issued ICS": "text-brand-700", Registered: "text-ink-2", Updated: "text-ink-2", Audited: "text-ink-2",
@@ -28,6 +29,7 @@ export default function AuditLogPage() {
   const [filters, setFilters] = useState<FilterValue>({});
   const [sort, setSort] = useState<{ key: "date" | "name"; dir: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(1);
+  const cols = useColumns("audit", [{ w: 56, fixed: true }, { w: 240, min: 170 }, { w: 150 }, { w: 166, min: 150 }, { w: 190 }, { w: 200 }, { w: "fr" }]);
   const [per, setPer] = useState(10);
   const [viewing, setViewing] = useState<string | null>(null);
 
@@ -65,14 +67,15 @@ export default function AuditLogPage() {
           </div>
         </div>
         <FilterChips value={filters} onChange={setFilters} />
-        <div className={cn("grid items-center h-[64px] mt-2 px-3 dash-b", COLS)}>
-          <span /><Th icon={Pencil}>Asset Name</Th><Th icon={Tag}>Serial ID</Th><Th icon={Box}>Type</Th><Th icon={Shield}>Department</Th><Th icon={User}>Registered By</Th><Th icon={Calendar}>Date</Th>
-        </div>
+        <TableScroll>
+        <ResizableHeader cols={cols} className="h-[64px] mt-2 px-3 dash-b">
+          <span /><Th icon={F.name}>Asset Name</Th><Th icon={F.serial}>Serial ID</Th><Th icon={F.type}>Type</Th><Th icon={F.department}>Department</Th><Th icon={F.person}>Registered By</Th><Th icon={F.date}>Date</Th>
+        </ResizableHeader>
         <div className="min-h-[200px]">
           <AnimatePresence mode="popLayout" initial={false}>
             {shown.map(({ e, a, by }, i) => (
-              <motion.div key={e.id} {...rowMotion(i)} onClick={() => a && setViewing(a.id)}
-                className={cn("relative grid items-center h-[60px] px-3 border-b border-line cursor-pointer transition-colors duration-[120ms] hover:bg-tint", COLS)}>
+              <motion.div key={e.id} {...rowMotion(i)} onClick={() => a && setViewing(a.id)} style={cols.style}
+                className="relative grid items-center h-[60px] px-3 border-b border-line cursor-pointer transition-colors duration-[120ms] hover:bg-tint">
                 {e.fresh && <motion.span initial={{ opacity: 0.9 }} animate={{ opacity: 0 }} transition={{ duration: 2.4, delay: 0.4 }} className="absolute inset-0 bg-brand-100 pointer-events-none" />}
                 <span className="relative t-b1 tnum pl-2">{(p - 1) * per + i + 1}</span>
                 <span className="relative flex items-center gap-3 min-w-0 pr-2">
@@ -92,6 +95,7 @@ export default function AuditLogPage() {
             ))}
           </AnimatePresence>
         </div>
+        </TableScroll>
         <div className="flex items-center h-[52px] px-5 t-b2 text-ink-2">
           <button onClick={() => { setPer(per === 10 ? 20 : 10); setPage(1); }} className="flex items-center gap-1 cursor-pointer hover:text-ink">Rows per page <span className="text-ink ml-1.5">{per}</span><ChevronDown size={13} /></button>
           <span className="ml-auto tnum">{(p - 1) * per + 1}–{(p - 1) * per + shown.length} of {rows.length}</span>

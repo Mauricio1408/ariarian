@@ -3,7 +3,7 @@
 import { Suspense, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Box, ChevronDown, CircleDot, Loader, Maximize2, Pencil, Plus, Send, Tag, Trash2, Wrench } from "lucide-react";
+import { ChevronDown, Maximize2, Pencil, Plus, Send, Trash2, Wrench } from "lucide-react";
 import { useLookups, useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { PRIORITY, PROBLEM_TYPE } from "@/lib/types";
@@ -15,6 +15,8 @@ import { useExport } from "@/lib/use-export";
 import { Page, PageTitle } from "@/components/shell/topbar";
 import { Button, Checkbox, CountUp, IconButton, Thumb } from "@/components/ui/primitives";
 import { MenuItem, Popover } from "@/components/ui/overlay";
+import { ResizableHeader, TableScroll, useColumns } from "@/components/ui/columns";
+import { FIELD_ICON as F } from "@/lib/field-icons";
 import { ExportButton, FilterChips, FilterMenu, Pager, SearchBox, SortMenu, Th, rowMotion, type FilterValue } from "@/components/ui/table";
 import { BulkBar } from "@/components/ui/bulk-bar";
 import { T } from "@/components/ui/motion";
@@ -23,7 +25,6 @@ import { ResolveModal } from "@/components/maintenance/resolve-modal";
 import { WorkOrderModal } from "@/components/maintenance/work-order-modal";
 import { Board } from "@/components/maintenance/board";
 
-const COLS = "grid-cols-[44px_196px_166px_160px_160px_1fr_150px]";
 const PER = 10;
 
 export default function MaintenancePage() {
@@ -56,6 +57,7 @@ function Maintenance() {
   const [filters, setFilters] = useState<FilterValue>({});
   const [sort, setSort] = useState<{ key: "promised" | "priority" | "asset"; dir: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(1);
+  const cols = useColumns("maintenance", [{ w: 44, fixed: true }, { w: 210, min: 160 }, { w: 182, min: 170 }, { w: 170 }, { w: 130 }, { w: "fr" }, { w: 160, min: 150 }]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [woModal, setWoModal] = useState<{ editing: WorkOrder | null } | null>(null);
   const [menu, setMenu] = useState<string | null>(null);
@@ -130,11 +132,12 @@ function Maintenance() {
                 {toolbarRight}
               </div>
               <FilterChips value={filters} onChange={setFilters} />
-              <div className={cn("grid items-center h-[42px] mt-2 dash-b px-3", COLS)}>
+              <TableScroll>
+              <ResizableHeader cols={cols} className="h-[42px] mt-2 dash-b px-3">
                 <Checkbox checked={shown.length > 0 && shown.every((w) => selected.has(w.id))} label="Select page"
                   onChange={(v) => setSelected((s) => { const n = new Set(s); shown.forEach((w) => (v ? n.add(w.id) : n.delete(w.id))); return n; })} />
-                <Th icon={Pencil}>Asset</Th><Th icon={Box}>Problem</Th><Th icon={Tag}>Technician</Th><Th icon={CircleDot}>Stage</Th><Th icon={Box} small>Promised</Th><Th icon={Loader} className="justify-end pr-3">Actions</Th>
-              </div>
+                <Th icon={F.name}>Asset</Th><Th icon={F.problem}>Problem</Th><Th icon={F.technician}>Technician</Th><Th icon={F.status}>Stage</Th><Th icon={F.deadline}>Promised</Th><Th icon={F.status} className="justify-end pr-3">Actions</Th>
+              </ResizableHeader>
               <div className="min-h-[200px]">
                 <AnimatePresence mode="popLayout" initial={false}>
                   {shown.length === 0 && (
@@ -149,8 +152,8 @@ function Maintenance() {
                     const d = deadline(w.promisedOn);
                     const sel = selected.has(w.id);
                     return (
-                      <motion.div key={w.id} {...rowMotion(i)} onClick={() => setParam("resolve", w.id)}
-                        className={cn("group grid items-center h-12 border-b border-line px-3 cursor-pointer transition-colors duration-[120ms]", COLS, sel ? "bg-brand-50" : "hover:bg-tint")}>
+                      <motion.div key={w.id} {...rowMotion(i)} onClick={() => setParam("resolve", w.id)} style={cols.style}
+                        className={cn("group grid items-center h-12 border-b border-line px-3 cursor-pointer transition-colors duration-[120ms]", sel ? "bg-brand-50" : "hover:bg-tint")}>
                         <Checkbox checked={sel} label={`Select ${a.name}`} onChange={() => setSelected((s) => { const n = new Set(s); if (n.has(w.id)) n.delete(w.id); else n.add(w.id); return n; })} />
                         <span className="flex items-center gap-3 min-w-0 pr-2"><Thumb src={a.photo} category={a.category} size={28} /><span className="text-[15px] font-medium truncate">{a.name}</span></span>
                         <span><ProblemChip p={w.problem} /></span>
@@ -168,6 +171,7 @@ function Maintenance() {
                   })}
                 </AnimatePresence>
               </div>
+              </TableScroll>
               <button onClick={() => setWoModal({ editing: null })} aria-label="New work order" className="group flex items-center h-12 w-full px-3 border-b border-line hover:bg-tint cursor-pointer transition-colors">
                 <Plus size={18} /><span className="ml-3 t-b2 text-ink-2 opacity-0 group-hover:opacity-100 transition-opacity">New work order</span>
               </button>

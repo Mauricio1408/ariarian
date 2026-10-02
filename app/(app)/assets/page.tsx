@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Box, CircleDot, FileText, Loader, Maximize2, Pencil, Plus, Repeat, Search, Send, Tag, Trash2, Upload } from "lucide-react";
+import { Box, CircleDot, FileText, Maximize2, Pencil, Plus, Repeat, Search, Send, Tag, Trash2, Upload } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { ASSET_CATEGORY, OPERATIONAL_STATUS, PHYSICAL_CONDITION } from "@/lib/types";
@@ -15,6 +15,8 @@ import { phpExact } from "@/lib/format";
 import { useExport } from "@/lib/use-export";
 import { Page, PageTitle } from "@/components/shell/topbar";
 import { Button, CategoryChip, Checkbox, IconButton, OPERATIONAL_TEXT, Skeleton, Thumb } from "@/components/ui/primitives";
+import { ResizableHeader, TableScroll, useColumns } from "@/components/ui/columns";
+import { FIELD_ICON as F } from "@/lib/field-icons";
 import { ExportButton, FilterChips, FilterMenu, Pager, SearchBox, SortMenu, Th, rowMotion, type FilterValue } from "@/components/ui/table";
 import { T } from "@/components/ui/motion";
 import { AssetDrawer } from "@/components/assets/asset-drawer";
@@ -24,7 +26,6 @@ import type { ExportFormat } from "@/lib/export";
 import { BulkBar } from "@/components/ui/bulk-bar";
 
 const PER = 10;
-const COLS = "grid-cols-[44px_196px_166px_160px_160px_1fr_150px]";
 type SortKey = "name" | "category" | "serial" | "operational" | "condition" | "cost";
 
 export default function AssetsPage() {
@@ -54,6 +55,7 @@ function Registry() {
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const cols = useColumns("assets", [{ w: 44, fixed: true }, { w: 220, min: 160 }, { w: 166, min: 150 }, { w: 160 }, { w: 160 }, { w: "fr" }, { w: 160, min: 150 }]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [transfer, setTransfer] = useState<string[] | null>(null);
   const [form, setForm] = useState<{ asset: Asset | null } | null>(null);
@@ -130,13 +132,14 @@ function Registry() {
         </div>
         <FilterChips value={filters} onChange={(v) => { setFilters(v); setPage(1); }} />
 
+        <TableScroll>
         {/* Header */}
-        <div className={cn("grid items-center h-[42px] mt-2 dash-b px-3", COLS)}>
+        <ResizableHeader cols={cols} className="h-[42px] mt-2 dash-b px-3">
           <Checkbox checked={allOnPage} indeterminate={!allOnPage && someOnPage} label="Select page"
             onChange={() => setSelected((s) => { const n = new Set(s); shown.forEach((a) => (allOnPage ? n.delete(a.id) : n.add(a.id))); return n; })} />
-          <Th icon={Pencil}>Asset Name</Th><Th icon={Box}>Asset Type</Th><Th icon={Tag}>Serial ID</Th><Th icon={CircleDot}>Operational</Th><Th icon={Box} small>Physical</Th>
-          <Th icon={Loader} className="justify-end pr-3">Actions</Th>
-        </div>
+          <Th icon={F.name}>Asset Name</Th><Th icon={F.type}>Asset Type</Th><Th icon={F.serial}>Serial ID</Th><Th icon={F.operational}>Operational</Th><Th icon={F.physical}>Physical</Th>
+          <Th icon={F.status} className="justify-end pr-3">Actions</Th>
+        </ResizableHeader>
 
         {/* Body */}
         <div className="relative min-h-[200px]">
@@ -144,7 +147,7 @@ function Registry() {
             {loading ? (
               <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
                 {Array.from({ length: Math.max(1, Math.min(PER, shown.length || 8)) }).map((_, i) => (
-                  <div key={i} className={cn("grid items-center h-12 border-b border-line px-3", COLS)} style={{ opacity: 1 - i * 0.07 }}>
+                  <div key={i} className="grid items-center h-12 border-b border-line px-3" style={{ ...cols.style, opacity: 1 - i * 0.07 }}>
                     <Skeleton className="size-4" /><span className="flex items-center gap-3"><Skeleton className="size-7" /><Skeleton className="h-3 w-28" /></span>
                     <Skeleton className="h-3 w-24" /><Skeleton className="h-3 w-24" /><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-24 ml-auto" />
                   </div>
@@ -160,13 +163,13 @@ function Registry() {
                   {shown.map((a, i) => {
                     const sel = selected.has(a.id);
                     return (
-                      <motion.div key={a.id} {...rowMotion(i)} onClick={() => setParam("asset", a.id)}
-                        className={cn("group relative grid items-center h-12 border-b border-line px-3 cursor-pointer transition-colors duration-[120ms]", COLS,
+                      <motion.div key={a.id} {...rowMotion(i)} onClick={() => setParam("asset", a.id)} style={cols.style}
+                        className={cn("group relative grid items-center h-12 border-b border-line px-3 cursor-pointer transition-colors duration-[120ms]",
                           sel ? "bg-brand-50" : "hover:bg-tint", flash === a.id && "bg-good-soft/50")}>
                         <Checkbox checked={sel} onChange={() => toggle(a.id)} label={`Select ${a.name}`} />
                         <span className="flex items-center gap-3 min-w-0 pr-2"><Thumb src={a.photo} category={a.category} size={28} /><span className="text-[15px] font-medium truncate">{a.name}</span></span>
                         <span><CategoryChip category={a.category} /></span>
-                        <span className="t-b1 tnum">{a.serial}</span>
+                        <span className="t-b1 tnum truncate pr-2">{a.serial}</span>
                         <span className={cn("t-b1", OPERATIONAL_TEXT[a.operational])}>{a.operational}</span>
                         <span className="t-b1">{a.condition}</span>
                         <span className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
@@ -183,6 +186,8 @@ function Registry() {
             )}
           </AnimatePresence>
         </div>
+
+        </TableScroll>
 
         {/* Footer */}
         {assets.length > 0 && (
@@ -211,7 +216,7 @@ function Registry() {
         { label: "Delete", icon: Trash2, danger: true, run: () => remove([...selected]) },
       ]} />
 
-      <AssetDrawer assetId={openId} onClose={() => setParam("asset", null)} onTransfer={(id) => setTransfer([id])} />
+      <AssetDrawer assetId={openId} onClose={() => setParam("asset", null)} onTransfer={(id) => setTransfer([id])} onEdit={(a) => setForm({ asset: a })} />
       <TransferModal open={!!transfer} assetIds={transfer ?? []} onClose={() => setTransfer(null)} onDone={() => setSelected(new Set())} />
       <DeleteAssetFlow assetIds={deleting} onClose={() => setDeleting(null)} onDeleted={() => { setSelected(new Set()); setParam("asset", null); }} />
       <AssetFormModal open={!!form} asset={form?.asset ?? null} onClose={() => setForm(null)}

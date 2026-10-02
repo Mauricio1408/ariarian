@@ -31,7 +31,7 @@ type Action =
   | { type: "logService"; assetId: string; date: string; cost: number; provider: string; description: string }
   | { type: "attachDocument"; assetId: string; name: string; size: number }
   | { type: "registryEmpty"; on: boolean }
-  | { type: "transfer"; assetIds: string[]; to: string; office?: string; address?: string }
+  | { type: "transfer"; assetIds: string[]; to: string; office?: string; address?: string; note?: string }
   | { type: "resolve"; woId: string; outcome: "storage" | "service"; note: string }
   | { type: "stage"; woId: string; stage: WorkOrderStage }
   | { type: "clearConflict"; woId: string }
@@ -47,7 +47,7 @@ type Action =
   | { type: "restoreWorkOrder"; wo: WorkOrder }
   | { type: "editWorkOrder"; wo: WorkOrder };
 
-const KEY = "ariarian:v3";
+const KEY = "ariarian:v4";
 
 // Dev only: a preview pane loaded hidden throttles timers, so Motion would crawl — skip animation there.
 if (process.env.NODE_ENV === "development" && typeof window !== "undefined" && (window as unknown as { __ARIARIAN_HIDDEN__?: number }).__ARIARIAN_HIDDEN__) {
@@ -94,8 +94,8 @@ function reducer(s: State, a: Action): State {
       if (!to) return s;
       const moved = s.assets.filter((x) => a.assetIds.includes(x.id));
       const assets = s.assets.map((x) => a.assetIds.includes(x.id)
-        ? { ...x, custodianId: a.to, office: a.office ?? to.office, address: a.address ?? x.address } : x);
-      const entries = moved.map((x, i) => audit({ ...s, seq: seq + i }, { assetId: x.id, action: "Transferred", note: `to ${to.name}` }));
+        ? { ...x, custodianId: a.to, office: a.office ?? to.office, department: to.department, address: a.address ?? x.address } : x);
+      const entries = moved.map((x, i) => audit({ ...s, seq: seq + i }, { assetId: x.id, action: "Transferred", note: `to ${to.name}${a.note ? ` — ${a.note}` : ""}` }));
       const n = notify({ ...s, seq }, {
         kind: "transfer", title: "Transfer completed",
         body: moved.length === 1 ? `${moved[0].name} moved to ${to.name} • ${to.office}` : `${moved.length} assets moved to ${to.name} • ${to.office}`,

@@ -4,26 +4,31 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState } from "react";
-import { Briefcase, Calendar, FileText, MapPin, Paperclip, PhilippinePeso, Repeat, Shield, Tag, TrendingUp, Upload, Wrench, Eye } from "lucide-react";
+import { ArrowRightLeft, ArrowUpRight, Eye, FileText, Paperclip, Pencil, Printer, TrendingUp, Upload, Wrench } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useLookups, useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import type { Asset } from "@/lib/types";
 import { AGENCIES } from "@/lib/seed";
-import { accumulated, ageMonths, bookValue, formType, monthly } from "@/lib/selectors";
+import { FIELD_ICON as F } from "@/lib/field-icons";
+import { accumulated, ageMonths, bookValue, formType, monthly, warrantyActive } from "@/lib/selectors";
 import { amount, deadline, DATE_TIER_CLASS, longDate, monthDay, php, phpExact, shortDate } from "@/lib/format";
 import { AS_OF } from "@/lib/types";
 import { CalendarPopup } from "@/components/ui/popups";
-import { Avatar, Button, OPERATIONAL_TEXT, PriorityPill } from "@/components/ui/primitives";
+import { Avatar, Button, CategoryChip, PriorityPill } from "@/components/ui/primitives";
 import { CloseButton, Drawer } from "@/components/ui/overlay";
 import { EASE, T } from "@/components/ui/motion";
 import { Barcode, QrCode } from "./codes";
+import { OP_TONE, PH_TONE, RecordRow, RecordSection, StatusPill } from "./record";
 
 type Tab = "Overview" | "Service" | "Value" | "Documents";
 const TABS: { key: Tab; icon: LucideIcon }[] = [
   { key: "Overview", icon: Eye }, { key: "Service", icon: Wrench }, { key: "Value", icon: TrendingUp }, { key: "Documents", icon: Paperclip },
 ];
+const CARD = "rounded-[14px] bg-white border border-line/80";
 
-export function AssetDrawer({ assetId, onClose, onTransfer }: { assetId: string | null; onClose: () => void; onTransfer: (id: string) => void }) {
+/** Asset Details — an entity header (photo, name, status, quick actions) over tabbed record sections. */
+export function AssetDrawer({ assetId, onClose, onTransfer, onEdit }: { assetId: string | null; onClose: () => void; onTransfer: (id: string) => void; onEdit?: (a: Asset) => void }) {
   const L = useLookups();
   const a = assetId ? L.asset.get(assetId) : undefined;
   const [tab, setTab] = useState<Tab>("Overview");
@@ -31,36 +36,55 @@ export function AssetDrawer({ assetId, onClose, onTransfer }: { assetId: string 
   if (assetId !== shown) { setShown(assetId); if (assetId) setTab("Overview"); }
 
   return (
-    <Drawer open={!!a} onClose={onClose} width={582} label="Asset details" className="bg-tint">
+    <Drawer open={!!a} onClose={onClose} width={600} label="Asset details" className="bg-[#f4f4f4]">
       {a && (
         <>
-          <header className="flex items-center h-[84px] px-10 dash-b bg-white shrink-0">
-            <h2 className="text-[16px]">Asset Details</h2>
-            <CloseButton onClick={onClose} className="ml-auto" />
+          <header className="bg-white border-b border-line shrink-0">
+            <div className="flex items-center gap-2 h-14 px-6">
+              <p className="t-b2 text-ink-2">Asset details <span className="text-ink-3">/</span> <span className="tnum">{a.id}</span></p>
+              <CloseButton onClick={onClose} className="ml-auto -mr-2" />
+            </div>
+            <div className="flex gap-4 px-6 pt-1 pb-5">
+              <span className="size-[88px] shrink-0 rounded-[14px] overflow-hidden bg-tint">
+                {a.photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={a.photo} alt={a.name} className="size-full object-cover" />
+                ) : null}
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="t-h4 truncate">{a.name}</h2>
+                <p className="t-b2 text-ink-2 tnum truncate">{a.serial} · {a.tag}</p>
+                <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                  <CategoryChip category={a.category} size="sm" />
+                  <StatusPill size="sm" tone={OP_TONE[a.operational]}>{a.operational}</StatusPill>
+                  <StatusPill size="sm" tone={PH_TONE[a.condition]}>{a.condition}</StatusPill>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 px-6 pb-4">
+              <Button size="sm" variant="primary" icon={ArrowRightLeft} onClick={() => onTransfer(a.id)} className="h-9 px-3.5">Transfer</Button>
+              <Button size="sm" icon={Printer} onClick={() => window.print()} className="h-9 px-3.5">Print label</Button>
+              {onEdit && <Button size="sm" icon={Pencil} onClick={() => onEdit(a)} className="h-9 px-3.5">Edit</Button>}
+            </div>
+            <div role="tablist" className="flex gap-1 px-4">
+              {TABS.map(({ key, icon: I }) => (
+                <button key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
+                  className={cn("relative flex items-center gap-1.5 h-10 px-3 text-[14px] cursor-pointer transition-colors duration-[120ms]", tab === key ? "text-ink font-medium" : "text-ink-2 hover:text-ink")}>
+                  <I size={15} strokeWidth={1.75} />{key}
+                  {tab === key && <motion.span layoutId="asset-tab" transition={T.spring} className="absolute left-2 right-2 -bottom-px h-[2px] rounded-full bg-brand-500" />}
+                </button>
+              ))}
+            </div>
           </header>
-          <div className="flex justify-center gap-1 pt-4 pb-1 bg-white/0">
-            {TABS.map(({ key, icon: I }) => (
-              <button key={key} onClick={() => setTab(key)}
-                className={cn("relative flex items-center gap-1.5 h-9 px-4 text-[13px] cursor-pointer transition-colors duration-[120ms]", tab === key ? "text-brand-600" : "text-ink-2 hover:text-ink")}>
-                <I size={14} strokeWidth={1.75} />{key}
-                {tab === key && <motion.span layoutId="asset-tab" transition={T.spring} className="absolute left-2 right-2 bottom-0 h-[2px] rounded-full bg-brand-500" />}
-              </button>
-            ))}
-          </div>
-          <div className="flex-1 overflow-y-auto scroll-slim px-5 pb-5">
+          <div className="flex-1 overflow-y-auto scroll-slim px-5 pb-6">
             <AnimatePresence mode="wait" initial={false}>
-              <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={T.swap} className="space-y-6 pt-2">
+              <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={T.swap} className="space-y-4 pt-5">
                 {tab === "Overview" && <Overview id={a.id} />}
                 {tab === "Service" && <Service id={a.id} />}
                 {tab === "Value" && <Value id={a.id} />}
                 {tab === "Documents" && <Documents id={a.id} onTransfer={() => onTransfer(a.id)} />}
               </motion.div>
             </AnimatePresence>
-          </div>
-          <div className="px-5 pb-5 pt-2 flex gap-3 shrink-0">
-            <Button variant="outline" icon={Repeat} className="h-11" onClick={() => onTransfer(a.id)}>Transfer</Button>
-            <motion.button whileTap={{ scale: 0.98 }} onClick={() => window.print()}
-              className="flex-1 h-11 rounded-md bg-brand-100 text-ink text-[16px] hover:bg-brand-200 cursor-pointer transition-colors duration-[120ms]">Print Label</motion.button>
           </div>
         </>
       )}
@@ -74,49 +98,43 @@ function Overview({ id }: { id: string }) {
   const agency = AGENCIES.find((g) => g.code === a.agency);
   const custodian = a.custodianId ? L.employee.get(a.custodianId) : undefined;
   const code = a.category === "Vehicles" ? `VIN-${a.serial.replace(/\D/g, "").padStart(4, "5")}${a.id.slice(-3)}` : a.serial;
-  const rows: { icon: LucideIcon; label: string; value: React.ReactNode; half?: boolean }[] = [
-    { icon: Tag, label: "Asset tag", value: a.tag.replace(/-/g, " - ") },
-    { icon: Shield, label: "Department", value: `${agency?.name} (${a.agency})` },
-    { icon: Shield, label: "Agency", value: `${agency?.name} (${a.agency})` },
-    { icon: Briefcase, label: "Office", value: a.office },
-    { icon: MapPin, label: "Room/Location", value: a.room, half: true },
-    { icon: Calendar, label: "Purchase date", value: <span className="text-ink-2">{longDate(a.acquiredOn)}</span>, half: true },
-    { icon: PhilippinePeso, label: "Value", value: phpExact(a.cost).replace(".00", "") },
-    { icon: MapPin, label: "Physical address", value: a.address },
-  ];
+  const live = warrantyActive(a);
   return (
     <>
-      <section className="card-raised px-8 py-7">
-        <h3 className="text-[24px] font-medium leading-tight">{a.name}</h3>
-        <p className="text-[16px] text-ink-2 uppercase tracking-wide">{a.category}</p>
-        <div className="flex items-end justify-between mt-4">
-          <div className="p-1.5 rounded-md border border-line"><QrCode value={a.id} size={100} /></div>
-          <div className="text-right">
-            <div className="flex justify-end"><Barcode value={a.tag} width={128} height={32} /></div>
-            <p className="text-[18px] font-medium tracking-[0.5em] mt-2">{a.category === "Vehicles" ? "VIN-" : a.serial.split("-")[0] + "-"}</p>
-            <div className="mt-1"><Barcode value={code} width={258} height={32} /></div>
-            <p className="text-[18px] font-medium tracking-[0.55em] tnum mt-1">{code.replace(/\D/g, "").split("").join("")}</p>
-            <p className="text-[16px] text-ink-2 mt-1">{code}</p>
+      <RecordSection title="Assignment">
+        <RecordRow icon={F.custodian} label="Custodian" labelWidth={130}>
+          {custodian ? (
+            <Link href={`/employees?employee=${custodian.id}`} className="group flex items-center gap-2.5 min-w-0 -my-1 py-1 px-1.5 rounded-md hover:bg-tint transition-colors">
+              <Avatar src={custodian.avatar} name={custodian.name} size={28} />
+              <span className="min-w-0"><span className="block text-[15px] font-medium truncate group-hover:text-brand-600 transition-colors">{custodian.name}</span><span className="block t-b3 text-ink-2 truncate">{custodian.position}</span></span>
+            </Link>
+          ) : <span className="px-1.5 text-[15px] text-ink-3">Unassigned</span>}
+        </RecordRow>
+        <RecordRow icon={F.department} label="Department" labelWidth={130}><span className="px-1.5 text-[15px] truncate">{a.department}</span></RecordRow>
+        <RecordRow icon={F.office} label="Office" labelWidth={130}><span className="px-1.5 text-[15px] truncate">DOST {a.office}</span></RecordRow>
+        <RecordRow icon={F.location} label="Room / location" labelWidth={130}><span className="px-1.5 text-[15px] truncate">{a.room ?? "—"}</span></RecordRow>
+        <RecordRow icon={F.address} label="Address" labelWidth={130}><span className="px-1.5 text-[15px] leading-snug py-1">{a.address ?? "—"}</span></RecordRow>
+      </RecordSection>
+
+      <RecordSection title="Acquisition">
+        <RecordRow icon={F.value} label="Acquisition cost" labelWidth={130}><span className="px-1.5 text-[15px] font-medium tnum">{phpExact(a.cost).replace(".00", "")}</span><span className="ml-auto t-b3 text-ink-2">{formType(a)}</span></RecordRow>
+        <RecordRow icon={F.date} label="Purchase date" labelWidth={130}><span className="px-1.5 text-[15px]">{longDate(a.acquiredOn)}</span></RecordRow>
+        <RecordRow icon={F.agency} label="Agency" labelWidth={130}><span className="px-1.5 text-[15px] truncate"><span className="font-medium">{a.agency}</span><span className="text-ink-2"> — {agency?.name}</span></span></RecordRow>
+        <RecordRow icon={F.warranty} label="Warranty" labelWidth={130}>
+          <span className={cn("px-1.5 text-[15px]", live ? (a.warrantyEnd.startsWith("2026") ? "text-date-due" : "text-ink") : "text-date-over")}>{live ? "Until" : "Expired"} {longDate(a.warrantyEnd)}</span>
+          {a.warrantyUrl && <a href={`https://${a.warrantyUrl}`} target="_blank" rel="noreferrer" className="ml-auto inline-flex items-center gap-1 t-b3 text-brand-600 hover:underline">Claim <ArrowUpRight size={13} /></a>}
+        </RecordRow>
+      </RecordSection>
+
+      <section className={cn(CARD, "px-5 py-4")}>
+        <header className="flex items-center"><h3 className="t-l1 text-ink-2">Property label</h3><span className="ml-auto t-b3 text-ink-3">Scan to open this record</span></header>
+        <div className="flex items-center gap-5 mt-3">
+          <div className="p-1.5 rounded-lg border border-line shrink-0"><QrCode value={a.id} size={92} /></div>
+          <div className="min-w-0 flex-1">
+            <Barcode value={code} width={300} height={40} />
+            <p className="t-b2 tnum tracking-[0.2em] mt-1.5 truncate">{code}</p>
+            <p className="t-b3 text-ink-2 tnum mt-0.5">Tag {a.tag}</p>
           </div>
-        </div>
-      </section>
-      <section className="card-raised px-6 py-3">
-        <div className="grid grid-cols-2">
-          {rows.map((r, i) => (
-            <motion.div key={r.label} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ ...T.state, delay: 0.05 + i * 0.03 }}
-              className={cn("flex gap-4 py-4", r.half ? "col-span-1" : "col-span-2")}>
-              <r.icon size={18} strokeWidth={1.75} className="text-ink mt-1 shrink-0" />
-              <div className="min-w-0"><p className="text-[10.5px] uppercase tracking-wide leading-none">{r.label}</p><p className="text-[16px] leading-tight mt-0.5">{r.value}</p></div>
-            </motion.div>
-          ))}
-        </div>
-        <div className="flex items-center gap-4 py-4 border-t border-line">
-          {custodian ? <Avatar src={custodian.avatar} name={custodian.name} size={34} /> : <span className="size-[34px] rounded-full bg-line" />}
-          <div className="min-w-0">
-            <p className="text-[10.5px] uppercase tracking-wide leading-none">Custodian</p>
-            {custodian ? <Link href={`/employees?employee=${custodian.id}`} className="text-[16px] hover:text-brand-600 transition-colors">{custodian.name} <span className="text-ink-2 t-b2">• {custodian.position}</span></Link> : <p className="text-[16px] text-ink-2">Unassigned</p>}
-          </div>
-          <span className={cn("ml-auto t-b2s", OPERATIONAL_TEXT[a.operational])}>{a.operational}</span>
         </div>
       </section>
     </>
@@ -135,7 +153,7 @@ function Service({ id }: { id: string }) {
   const [cal, setCal] = useState(false);
   const [err, setErr] = useState(false);
   const wos = state.workOrders.filter((w) => w.assetId === id).sort((x, y) => y.reportedOn.localeCompare(x.reportedOn));
-  const field = "w-full h-8 rounded-[4px] bg-tint px-5 text-[14px] outline-none placeholder:text-ink-2 focus:bg-white focus:shadow-[0_0_0_2px_var(--color-brand-200)] transition-[background-color,box-shadow]";
+  const field = "w-full h-8 rounded-md bg-tint px-3.5 text-[14px] outline-none placeholder:text-ink-2 focus:bg-white focus:shadow-[0_0_0_2px_var(--color-brand-200)] transition-[background-color,box-shadow]";
   const submit = () => {
     if (!date || !provider.trim()) { setErr(true); return; }
     dispatch({ type: "logService", assetId: id, date, cost: Number(cost.replace(/[^\d]/g, "")) || 0, provider: provider.trim(), description: desc.trim() });
@@ -144,22 +162,22 @@ function Service({ id }: { id: string }) {
   };
   return (
     <>
-      <section className="card-raised px-6 pt-6 pb-4">
-        <h3 className="text-[16px] font-medium px-5">Log Service</h3>
-        <div className="grid grid-cols-2 gap-x-16 mt-3">
+      <section className={cn(CARD, "px-6 pt-6 pb-4")}>
+        <h3 className="t-l1 text-ink-2">Log service</h3>
+        <div className="grid grid-cols-2 gap-x-4 mt-3">
           <div className="relative">
             <button type="button" onClick={() => setCal((v) => !v)} className={cn(field, "flex items-center justify-between text-left cursor-pointer", err && !date && "shadow-[0_0_0_1px_var(--color-bad-text)]")}>
-              <span className={date ? "text-ink" : "text-ink-2"}>{date ? longDate(date) : "Select Date"}</span><Calendar size={13} />
+              <span className={date ? "text-ink" : "text-ink-2"}>{date ? longDate(date) : "Select Date"}</span><F.date size={14} strokeWidth={1.75} />
             </button>
             <CalendarPopup open={cal} onClose={() => setCal(false)} value={date ?? AS_OF} max={AS_OF} onDone={setDate} />
           </div>
           <input value={cost} onChange={(e) => setCost(e.target.value.replace(/[^\d,]/g, ""))} placeholder="COST (₱)" inputMode="numeric" className={cn(field, "text-[12px] placeholder:text-[12px]")} />
         </div>
-        <input value={provider} onChange={(e) => setProvider(e.target.value)} placeholder="Input Provider" className={cn(field, "mt-6", err && !provider.trim() && "shadow-[0_0_0_1px_var(--color-bad-text)]")} />
-        <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Add Description" rows={3} className={cn(field, "h-20 py-3 mt-6 resize-none")} />
-        <button type="button" onClick={submit} className="w-full h-9 mt-5 rounded-[4px] bg-brand-100 text-[16px] hover:bg-brand-200 cursor-pointer transition-colors">Log Service</button>
+        <input value={provider} onChange={(e) => setProvider(e.target.value)} placeholder="Input Provider" className={cn(field, "mt-3", err && !provider.trim() && "shadow-[0_0_0_1px_var(--color-bad-text)]")} />
+        <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Add Description" rows={3} className={cn(field, "h-20 py-3 mt-3 resize-none")} />
+        <button type="button" onClick={submit} className="w-full h-9 mt-4 rounded-md bg-brand-500 text-white text-[15px] font-medium hover:bg-brand-600 cursor-pointer transition-colors">Log service</button>
       </section>
-      <section className="card-raised px-6 py-5">
+      <section className={cn(CARD, "px-6 py-5")}>
         <div className="flex items-center"><p className="t-l1 text-ink-2">Service history</p><Link href="/maintenance" className="ml-auto t-b3 text-brand-600 hover:underline">Open queue</Link></div>
         {wos.length === 0 && <p className="t-b2 text-ink-2 mt-4">No service on record.</p>}
         <ol className="relative mt-4 ml-2 border-l border-line">
@@ -188,7 +206,7 @@ function Value({ id }: { id: string }) {
   return (
     <>
       <div className="grid grid-cols-2 gap-5">
-        <section className="card-raised px-6 py-5">
+        <section className={cn(CARD, "px-6 py-5")}>
           <p className="text-[13px] tracking-[0.06em] uppercase text-ink-2">Purchase</p>
           <p className="text-[24px] font-semibold mt-2">{money(a.cost)}</p>
         </section>
@@ -201,7 +219,7 @@ function Value({ id }: { id: string }) {
         <p className="text-[13px] uppercase">TCO (Ownership)</p>
         <p className="ml-auto text-[30px] font-semibold">{money(a.cost + maint)}</p>
       </section>
-      <section className="card-raised px-6 py-5">
+      <section className={cn(CARD, "px-6 py-5")}>
         <div className="flex items-end"><p className="text-[13px] tracking-[0.06em] uppercase text-ink-2 leading-tight">Value<br />retained</p><p className="ml-auto text-[14px] tnum">{Math.round(retained * 100)}%</p></div>
         <div className="h-2 rounded-full bg-brand-100 mt-2 overflow-hidden"><motion.div className="h-full rounded-full bg-brand-500" initial={{ width: 0 }} animate={{ width: `${retained * 100}%` }} transition={{ duration: 0.7, ease: EASE }} /></div>
         <dl className="mt-4">
@@ -248,7 +266,7 @@ function Documents({ id, onTransfer }: { id: string; onTransfer: () => void }) {
           <p className="t-b3 text-ink-2 mt-1">AI will automatically extract details</p>
         </div>
       </section>
-      <section className="card-raised px-6 py-5">
+      <section className={cn(CARD, "px-6 py-5")}>
         <p className="t-l1 text-ink-2">Files</p>
         <div className="mt-3 space-y-2">
           {(a.documents ?? []).map((d) => (

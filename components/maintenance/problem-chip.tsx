@@ -1,14 +1,15 @@
 import { cn } from "@/lib/utils";
 import type { ProblemType } from "@/lib/types";
 
+/** Figma Table Data 633:1387 — Problem chips: 158x35, radius 8, Light 16. */
 const TONE: Record<ProblemType, string> = {
-  "Physical Damage": "bg-good-soft text-good-text",
-  "Hardware Failure": "bg-bad-soft text-bad-text",
-  "Software Issue": "bg-brand-100 text-brand-700",
-  "Battery Issue": "bg-warn-soft text-warn-text",
-  Others: "bg-tint text-ink-2 border border-line",
+  "Hardware Failure": "bg-cat-hw-bg text-cat-hw",
+  "Physical Damage": "bg-cat-veh-bg text-cat-veh",
+  "Software Issue": "bg-cat-sw-bg text-cat-sw",
+  "Battery Issue": "bg-cat-app-bg text-cat-app",
+  Others: "bg-cat-oth-bg text-cat-oth",
 };
 
 export function ProblemChip({ p, className }: { p: ProblemType; className?: string }) {
-  return <span className={cn("inline-grid place-items-center h-9 w-[140px] rounded-md text-[14px] whitespace-nowrap", TONE[p], className)}>{p}</span>;
+  return <span className={cn("inline-grid place-items-center h-[35px] w-[158px] rounded-lg text-[16px] font-light whitespace-nowrap", TONE[p], className)}>{p}</span>;
 }

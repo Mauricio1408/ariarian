@@ -92,7 +92,7 @@ const NAMED_EMPLOYEES: Employee[] = [
   { id: "DOST-2015-0311", department: "Administrative Service (AS)", name: "Grace Tan", email: "gtan@dost.gov.ph", position: "Motor Pool Supervisor", office: "Logistics Center", status: "Active", avatar: "/img/people/grace.jpg", lastAudit: "2026-01-08" },
   { id: "DOST-2022-0140", department: "Science and Technology Information Institute (STII)", name: "Carlos Rivera", email: "crivera@dost.gov.ph", position: "IT Officer I", office: "Central Office", status: "Active", avatar: "/img/people/carlos.jpg", lastAudit: "2026-02-10" },
   { id: "DOST-2023-0511", department: "Technology Application and Promotion Institute (TAPI)", name: "Paolo Mendoza", email: "pmendoza@dost.gov.ph", position: "Project Dev. Officer I", office: "Regional Office III", status: "Clearance", avatar: "/img/people/paolo.jpg", clearanceDeadline: "2026-03-27" },
-  { id: "DOST-2015-0044", department: "Office of the Secretary (OSEC)", name: "Rosa Lim", email: "rlim@dost.gov.ph", position: "Administrative Officer IV", office: "Central Office", status: "Clearance", avatar: "/img/people/rosa.png", clearanceDeadline: "2026-03-10" },
+  { id: "DOST-2015-0044", department: "Office of the Secretary (OSEC)", name: "Rosa Lim", email: "rlim@dost.gov.ph", position: "Administrative Officer IV", office: "Central Office", status: "Clearance", avatar: "/img/people/rosa.jpg", clearanceDeadline: "2026-03-10" },
   { id: "DOST-2021-0377", department: "Planning and Evaluation Service (PES)", name: "Miguel Bautista", email: "mbautista@dost.gov.ph", position: "Science Research Analyst", office: "Regional Office VI", status: "Clearance", avatar: "/img/people/miguel.jpg", clearanceDeadline: "2026-03-12" },
 ];
 export const ME_ID = "DOST-2016-0102";

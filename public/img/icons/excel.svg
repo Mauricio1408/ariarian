@@ -1,0 +1,16 @@
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect x="5" y="1.25" width="15" height="17.5" rx="2" fill="#2FB776"/>
+<path d="M5 14.375H20V16.75C20 17.8546 19.1046 18.75 18 18.75H7C5.89543 18.75 5 17.8546 5 16.75V14.375Z" fill="url(#xl0)"/>
+<rect x="12.5" y="10" width="7.5" height="4.375" fill="#229C5B"/>
+<rect x="12.5" y="5.625" width="7.5" height="4.375" fill="#27AE68"/>
+<path d="M5 3.25C5 2.14543 5.89543 1.25 7 1.25H12.5V5.625H5V3.25Z" fill="#1D854F"/>
+<rect x="5" y="5.625" width="7.5" height="4.375" fill="#197B43"/>
+<rect x="5" y="10" width="7.5" height="4.375" fill="#1B5B38"/>
+<path d="M5 8.625C5 6.96815 6.34315 5.625 8 5.625H9.5C11.1569 5.625 12.5 6.96815 12.5 8.625V13.875C12.5 15.5319 11.1569 16.875 9.5 16.875H5V8.625Z" fill="black" fill-opacity="0.3"/>
+<rect y="4.375" width="11.25" height="11.25" rx="2" fill="url(#xl1)"/>
+<path d="M8.125 13.125L6.36383 9.9375L8.04768 6.875H6.67311L5.63359 8.83036L4.61125 6.875H3.19373L4.88617 9.9375L3.125 13.125H4.49957L5.60782 11.0536L6.70747 13.125H8.125Z" fill="white"/>
+<defs>
+<linearGradient id="xl0" x1="5" y1="16.5625" x2="20" y2="16.5625" gradientUnits="userSpaceOnUse"><stop stop-color="#163C27"/><stop offset="1" stop-color="#2A6043"/></linearGradient>
+<linearGradient id="xl1" x1="0" y1="10" x2="11.25" y2="10" gradientUnits="userSpaceOnUse"><stop stop-color="#185A30"/><stop offset="1" stop-color="#176F3D"/></linearGradient>
+</defs>
+</svg>

@@ -1,8 +1,9 @@
 "use client";
 
+import { FIELD_ICON as F } from "@/lib/field-icons";
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Box, Calendar, ChevronDown, Coins, Plus, Shield, X } from "lucide-react";
+import { Box, ChevronDown, Coins, Plus, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -64,13 +65,13 @@ function Reports() {
     <>
       <PageTitle title="Financial Reports" sub="Asset Valuation, Lifecycle Budgeting, and Investment Analysis." />
       <div className="flex items-center gap-3 -mt-2 mb-5">
-        <Chip icon={Box} label="Category" value={cat} open={menu === "cat"} onToggle={() => setMenu(menu === "cat" ? null : "cat")}>
+        <Chip icon={F.type} label="Category" value={cat} open={menu === "cat"} onToggle={() => setMenu(menu === "cat" ? null : "cat")}>
           <CategoryPopup withAll open={menu === "cat"} onClose={() => setMenu(null)} value={cat as AssetCategory | "All"} onPick={setCat} />
         </Chip>
-        <Chip icon={Shield} label="Department" value={dept === "All" ? "All" : dept.replace(/ \(.*\)$/, "")} open={menu === "dept"} onToggle={() => setMenu(menu === "dept" ? null : "dept")}>
+        <Chip icon={F.department} label="Department" value={dept === "All" ? "All" : dept.replace(/ \(.*\)$/, "")} open={menu === "dept"} onToggle={() => setMenu(menu === "dept" ? null : "dept")}>
           <DepartmentPopup withAll open={menu === "dept"} onClose={() => setMenu(null)} value={dept} onPick={setDept} />
         </Chip>
-        <Chip icon={Calendar} label="Acquired" value={since ? `Since ${shortDate(since)}` : "Any date"} open={menu === "acq"} onToggle={() => setMenu(menu === "acq" ? null : "acq")}>
+        <Chip icon={F.date} label="Acquired" value={since ? `Since ${shortDate(since)}` : "Any date"} open={menu === "acq"} onToggle={() => setMenu(menu === "acq" ? null : "acq")}>
           <CalendarPopup open={menu === "acq"} onClose={() => setMenu(null)} value={since ?? "2026-01-01"} max={AS_OF} onDone={setSince} />
         </Chip>
         {office !== "All" && (
@@ -81,7 +82,7 @@ function Reports() {
         <AnimatePresence initial={false}>
           {extra && (
             <motion.div initial={{ opacity: 0, scale: 0.9, width: 0 }} animate={{ opacity: 1, scale: 1, width: "auto" }} exit={{ opacity: 0, scale: 0.9, width: 0 }} transition={T.state}>
-              <Chip icon={Box} label="Condition" value={condition} open={menu === "cond"} onToggle={() => setMenu(menu === "cond" ? null : "cond")}>
+              <Chip icon={F.physical} label="Condition" value={condition} open={menu === "cond"} onToggle={() => setMenu(menu === "cond" ? null : "cond")}>
                 <OptionPopup open={menu === "cond"} onClose={() => setMenu(null)} options={["All", "Excellent", "Fair", "Poor"] as const} value={condition as "All"} onPick={setCondition} width={180} />
               </Chip>
             </motion.div>

@@ -3,7 +3,7 @@
 import { Suspense, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Box, Briefcase, ChevronDown, ChevronLeft, ChevronRight, Folder, Hash, Loader, MoreHorizontal, PhilippinePeso, Plus, User } from "lucide-react";
+import { Box, ChevronDown, ChevronLeft, ChevronRight, Folder, MoreHorizontal, PhilippinePeso, Plus, User } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { CAPITALISATION_THRESHOLD } from "@/lib/types";
@@ -13,6 +13,8 @@ import { php } from "@/lib/format";
 import { useExport } from "@/lib/use-export";
 import { Page, PageTitle } from "@/components/shell/topbar";
 import { Avatar, Button, Checkbox, CountUp, Pill, Tabs } from "@/components/ui/primitives";
+import { ResizableHeader, TableScroll, useColumns } from "@/components/ui/columns";
+import { FIELD_ICON as F } from "@/lib/field-icons";
 import { ExportButton, FilterChips, FilterMenu, Pager, SearchBox, SortMenu, Th, rowMotion, type FilterValue } from "@/components/ui/table";
 import { KpiCard } from "@/components/ui/kpi";
 import { BulkBar } from "@/components/ui/bulk-bar";
@@ -22,7 +24,6 @@ import { EmployeeDrawer } from "@/components/employees/employee-drawer";
 import { EmployeeFormModal } from "@/components/employees/employee-form-modal";
 
 type TabKey = "Active" | "On Leave" | "Clearance" | "All";
-const COLS = "grid-cols-[52px_208px_164px_170px_1fr_70px_134px_92px]";
 
 export default function EmployeesPage() {
   return <Page crumb="Employees" icon={User}><Suspense><Employees /></Suspense></Page>;
@@ -41,6 +42,7 @@ function Employees() {
   const [filters, setFilters] = useState<FilterValue>({});
   const [sort, setSort] = useState<{ key: "name" | "assets" | "value" | "office"; dir: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(1);
+  const cols = useColumns("employees", [{ w: 52, fixed: true }, { w: 232, min: 180 }, { w: 164 }, { w: 190 }, { w: "fr" }, { w: 84 }, { w: 140 }, { w: 104, min: 96 }]);
   const [per, setPer] = useState(10);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [transfer, setTransfer] = useState<string[] | null>(null);
@@ -142,12 +144,13 @@ function Employees() {
       </AnimatePresence>
 
       <section className="card-raised mt-5 overflow-hidden">
-        <div className={cn("grid items-center h-[60px] px-5 dash-b", COLS)}>
+        <TableScroll>
+        <ResizableHeader cols={cols} className="h-[60px] px-5 dash-b">
           <Checkbox checked={allOnPage} indeterminate={!allOnPage && shown.some((e) => selected.has(e.id))} label="Select page"
             onChange={() => setSelected((s) => { const n = new Set(s); shown.forEach((e) => (allOnPage ? n.delete(e.id) : n.add(e.id))); return n; })} />
-          <Th icon={User}>Employee</Th><Th icon={Hash}>Employee ID</Th><Th icon={Briefcase}>Position</Th><Th icon={Folder}>Office</Th>
-          <Th icon={Box} className="justify-end">Assets</Th><Th icon={PhilippinePeso} className="justify-end">Accountable</Th><Th icon={Loader} className="justify-end">Status</Th>
-        </div>
+          <Th icon={F.person}>Employee</Th><Th icon={F.employeeId}>Employee ID</Th><Th icon={F.position}>Position</Th><Th icon={F.office}>Office</Th>
+          <Th icon={F.assets} className="justify-end">Assets</Th><Th icon={F.value} className="justify-end">Accountable</Th><Th icon={F.status} className="justify-end">Status</Th>
+        </ResizableHeader>
         <div className="min-h-[120px]">
           <AnimatePresence mode="popLayout" initial={false}>
             {shown.length === 0 && (
@@ -156,8 +159,8 @@ function Employees() {
             {shown.map((e, i) => {
               const s = stats.get(e.id); const sel = selected.has(e.id);
               return (
-                <motion.div key={`${tab}-${e.id}`} {...rowMotion(i)} onClick={() => setParam("employee", e.id)}
-                  className={cn("group grid items-center h-[73px] px-5 border-b border-line cursor-pointer transition-colors duration-[120ms]", COLS, sel ? "bg-brand-50" : "hover:bg-tint")}>
+                <motion.div key={`${tab}-${e.id}`} {...rowMotion(i)} onClick={() => setParam("employee", e.id)} style={cols.style}
+                  className={cn("group grid items-center h-[73px] px-5 border-b border-line cursor-pointer transition-colors duration-[120ms]", sel ? "bg-brand-50" : "hover:bg-tint")}>
                   <Checkbox checked={sel} label={`Select ${e.name}`} onChange={() => setSelected((x) => { const n = new Set(x); if (n.has(e.id)) n.delete(e.id); else n.add(e.id); return n; })} />
                   <span className="flex items-center gap-3 min-w-0"><Avatar src={e.avatar} name={e.name} size={32} />
                     <span className="min-w-0"><span className="block text-[15px] truncate">{e.name}</span><span className="block t-b3 text-ink-2 truncate">{e.email}</span></span></span>
@@ -175,6 +178,7 @@ function Employees() {
             })}
           </AnimatePresence>
         </div>
+        </TableScroll>
         <div className="flex items-center h-[50px] px-5 t-b2 text-ink-2">
           <div className="relative">
             <button onClick={() => setPerOpen((o) => !o)} className="flex items-center gap-1 cursor-pointer hover:text-ink">Rows per page <span className="text-ink ml-1.5">{per}</span><ChevronDown size={13} /></button>

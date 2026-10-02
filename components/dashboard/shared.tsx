@@ -31,11 +31,11 @@ export function DashCard({ id, icon: I, title, onToggle, expanded, children, cla
       className={cn("bg-white shadow-raised overflow-hidden", className)}>
       <motion.div layout="position" className={cn("flex items-center gap-4", expanded ? "px-8 pt-10 pb-7 dash-b mx-0" : "px-6 pt-5 pb-3")}>
         <I size={expanded ? 30 : 26} strokeWidth={1.75} />
-        <h2 className={expanded ? "t-h2 font-semibold" : "t-h3"}>{title}</h2>
+        <h2 className={expanded ? "t-h2 font-semibold" : "text-[22px] leading-[1.25] font-medium tracking-[-0.01em]"}>{title}</h2>
         <motion.button onClick={onToggle} aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
           whileTap={{ scale: 0.94 }} transition={T.hover}
           className="ml-auto grid place-items-center size-9 rounded-md hover:bg-tint cursor-pointer focus-ring">
-          {expanded ? <Minimize2 size={28} strokeWidth={1.6} /> : <Maximize2 size={22} strokeWidth={1.75} />}
+          {expanded ? <Minimize2 size={28} strokeWidth={1.6} /> : <Maximize2 size={19} strokeWidth={1.75} />}
         </motion.button>
       </motion.div>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ ...T.page, delay: expanded ? 0.18 : delay }}>

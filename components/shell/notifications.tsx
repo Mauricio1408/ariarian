@@ -80,14 +80,14 @@ export function NotificationsPanel() {
                 </div>
               </div>
               <div className="flex items-center mt-4">
-                <Tabs id="notif" variant="pill" className="[&>button]:px-2.5" value={filter} onChange={setFilter} tabs={[
+                <Tabs id="notif" variant="pill" className="min-w-0 gap-0.5 [&>button]:px-2.5 [&>button]:shrink-0" value={filter} onChange={setFilter} tabs={[
                   { key: "all", label: "All", count: unread.length },
                   { key: "maintenance", label: "Maintenance", count: countOf("maintenance") },
                   { key: "transfer", label: "Transfers", count: countOf("transfer") },
                   { key: "warranty", label: "Warranty", count: countOf("warranty") },
                   { key: "people", label: "People", count: countOf("people") },
                 ]} />
-                <label className="ml-auto flex items-center gap-2 text-[13px] text-ink-2 whitespace-nowrap pl-2">Unread only <Toggle on={unreadOnly} onChange={setUnreadOnly} label="Unread only" /></label>
+                <label className="ml-auto shrink-0 flex items-center gap-2 text-[13px] text-ink-2 whitespace-nowrap pl-3 cursor-pointer">Unread only <Toggle on={unreadOnly} onChange={setUnreadOnly} label="Unread only" /></label>
               </div>
             </div>
 

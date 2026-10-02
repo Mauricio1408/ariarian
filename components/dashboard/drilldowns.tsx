@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState } from "react";
-import { Activity, ArrowRight, ArrowUpRight, Calendar, Clock, Package, Pencil, Shield, TriangleAlert, Box } from "lucide-react";
+import { Activity, ArrowRight, Package, Shield, TriangleAlert } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { AS_OF } from "@/lib/types";
@@ -13,6 +13,9 @@ import { ageMonths, byKey, openOrders, warrantyActive, warrantyByYear } from "@/
 import { monthDay, php, phpShort, shortDate } from "@/lib/format";
 import { CategoryChip, CountUp, Thumb } from "@/components/ui/primitives";
 import { Pager, SearchBox, Th, rowMotion } from "@/components/ui/table";
+import { ResizableHeader, TableScroll, useColumns } from "@/components/ui/columns";
+import { FIELD_ICON as F } from "@/lib/field-icons";
+
 import { EASE, T, stagger } from "@/components/ui/motion";
 import { BarRows, Columns, Donut, Stacked } from "./charts";
 import { ATTENTION, DashCard, HEALTH_COLOR, useAgencyRows } from "./shared";
@@ -275,6 +278,7 @@ export function WarrantyDrill({ onClose }: { onClose: () => void }) {
   const [year, setYear] = useState<number | null>(null);
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
+  const cols = useColumns("warranty", [{ w: 220, min: 170 }, { w: 165, min: 150 }, { w: 150 }, { w: 150 }, { w: 120 }, { w: "fr" }, { w: 80, min: 72 }]);
   const rows = useMemo(() => state.assets
     .filter((a) => !year || a.warrantyEnd.startsWith(String(year)))
     .filter((a) => !q || `${a.name} ${a.serial} ${a.tag}`.toLowerCase().includes(q.toLowerCase()))
@@ -299,15 +303,16 @@ export function WarrantyDrill({ onClose }: { onClose: () => void }) {
           <SearchBox value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search by asset name, serial, or tag" className="w-[440px]" />
           <div className="ml-auto"><Pager page={page} pages={pages} onPage={setPage} /></div>
         </div>
-        <div className="grid grid-cols-[200px_165px_150px_150px_120px_1fr_80px] items-center h-14 mt-3 dash-b px-4">
-          <Th icon={Pencil}>Asset Name</Th><Th icon={Box}>Type</Th><Th icon={Calendar}>Start Date</Th><Th icon={Calendar}>End Date</Th><Th icon={Clock}>Duration</Th><Th icon={ArrowUpRight}>Claim Procedure</Th><span />
-        </div>
+        <TableScroll>
+        <ResizableHeader cols={cols} className="h-14 mt-3 dash-b px-4">
+          <Th icon={F.name}>Asset Name</Th><Th icon={F.type}>Type</Th><Th icon={F.date}>Start Date</Th><Th icon={F.date}>End Date</Th><Th icon={F.duration}>Duration</Th><Th icon={F.link}>Claim Procedure</Th><span />
+        </ResizableHeader>
         <AnimatePresence mode="popLayout" initial={false}>
           {shown.map((a, i) => {
             const active = warrantyActive(a);
             return (
-              <motion.div key={a.id} {...rowMotion(i)} className="grid grid-cols-[200px_165px_150px_150px_120px_1fr_80px] items-center h-[60px] border-b border-line px-4 hover:bg-tint transition-colors">
-                <span className="flex items-center gap-3 t-b1 truncate"><Thumb src={a.photo} category={a.category} size={28} />{a.name}</span>
+              <motion.div key={a.id} {...rowMotion(i)} style={cols.style} className="grid items-center h-[60px] border-b border-line px-4 hover:bg-tint transition-colors">
+                <span className="flex items-center gap-3 t-b1 min-w-0 pr-2"><Thumb src={a.photo} category={a.category} size={28} /><span className="truncate">{a.name}</span></span>
                 <span><CategoryChip category={a.category} /></span>
                 <span className="t-b1 text-ink-2">{shortDate(a.warrantyStart)}</span>
                 <span className={cn("t-b1", active ? (a.warrantyEnd.startsWith("2026") ? "text-date-due" : "text-ink-2") : "text-date-over")}>{shortDate(a.warrantyEnd)}</span>
@@ -318,6 +323,7 @@ export function WarrantyDrill({ onClose }: { onClose: () => void }) {
             );
           })}
         </AnimatePresence>
+        </TableScroll>
         <p className="t-b2 text-ink-2 mt-4">Showing {shown.length} of {rows.length}{year ? ` lapsing in ${year}` : ""}</p>
       </Sub>
     </div>
