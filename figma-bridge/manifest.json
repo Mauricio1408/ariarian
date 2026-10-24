@@ -1,0 +1,12 @@
+{
+  "name": "AriArian Bridge (Antigravity)",
+  "id": "ariarian-figma-bridge",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["*"],
+    "reasoning": "Connect to local bridge server for agent automation"
+  }
+}

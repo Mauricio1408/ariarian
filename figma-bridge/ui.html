@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #1e1e1e;
+      color: #f0f0f0;
+      padding: 16px;
+      user-select: none;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge.connected {
+      background: #14532d;
+      color: #86efac;
+    }
+    .badge.disconnected {
+      background: #7f1d1d;
+      color: #fca5a5;
+    }
+    .pulse {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      margin-right: 4px;
+    }
+    .status-text {
+      font-size: 13px;
+      color: #d1d5db;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+    .log-box {
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      padding: 8px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #9ca3af;
+      height: 60px;
+      overflow-y: auto;
+    }
+    .log-item { margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div id="statusBadge" class="badge disconnected">
+      <span class="pulse"></span><span id="badgeText">Disconnected</span>
+    </div>
+  </div>
+  <div id="statusMsg" class="status-text">Connecting to ws://localhost:8765/ws...</div>
+  <div id="logBox" class="log-box"></div>
+
+  <script>
+    const badge = document.getElementById("statusBadge");
+    const badgeText = document.getElementById("badgeText");
+    const statusMsg = document.getElementById("statusMsg");
+    const logBox = document.getElementById("logBox");
+
+    function log(text) {
+      const item = document.createElement("div");
+      item.className = "log-item";
+      item.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+      logBox.appendChild(item);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    let socket = null;
+    let reconnectTimer = null;
+
+    function connect() {
+      if (socket) {
+        socket.close();
+      }
+
+      log("Connecting to bridge server...");
+      try {
+        socket = new WebSocket("ws://localhost:8765/ws");
+      } catch (err) {
+        log("WebSocket error: " + err.message);
+        scheduleReconnect();
+        return;
+      }
+
+      socket.onopen = () => {
+        badge.className = "badge connected";
+        badgeText.textContent = "Bridge Active";
+        statusMsg.textContent = "🟢 Ready for Antigravity commands.";
+        log("Connected to Antigravity Bridge!");
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "EVAL") {
+            log(`Executing command (${data.id})...`);
+            parent.postMessage({ pluginMessage: { type: "EXECUTE", id: data.id, code: data.code } }, "*");
+          }
+        } catch (e) {
+          log("Message parse error: " + e.message);
+        }
+      };
+
+      socket.onclose = () => {
+        badge.className = "badge disconnected";
+        badgeText.textContent = "Offline";
+        statusMsg.textContent = "🔴 Server offline. Reconnecting...";
+        log("Connection lost.");
+        scheduleReconnect();
+      };
+
+      socket.onerror = (err) => {
+        log("Socket encountered error.");
+      };
+    }
+
+    function scheduleReconnect() {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(connect, 2000);
+    }
+
+    // Listen to execution results from Figma's main sandbox (code.js)
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (msg && msg.type === "RESULT") {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({
+            type: "RESULT",
+            id: msg.id,
+            result: msg.result,
+            error: msg.error
+          }));
+          log(`Result sent for ${msg.id} (${msg.error ? "Failed" : "Success"})`);
+        }
+      }
+    };
+
+    connect();
+  </script>
+</body>
+</html>

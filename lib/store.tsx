@@ -7,7 +7,7 @@
 import { MotionGlobalConfig } from "motion/react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { buildSeed, CUSTODIAN_ID, ME_ID } from "./seed";
-import type { AppNotification, Asset, AuditEntry, Dataset, Employee, PropertyForm, Session, Settings, WorkOrder, WorkOrderStage } from "./types";
+import type { AppNotification, Asset, AuditEntry, Dataset, Employee, PhysicalCondition, PropertyForm, Session, Settings, WorkOrder, WorkOrderStage } from "./types";
 import { AS_OF } from "./types";
 import { formType } from "./selectors";
 
@@ -45,7 +45,8 @@ type Action =
   | { type: "upsertEmployee"; employee: Employee; isNew: boolean }
   | { type: "removeWorkOrder"; woId: string }
   | { type: "restoreWorkOrder"; wo: WorkOrder }
-  | { type: "editWorkOrder"; wo: WorkOrder };
+  | { type: "editWorkOrder"; wo: WorkOrder }
+  | { type: "auditPhysicalCount"; assetId: string; condition?: PhysicalCondition; note?: string };
 
 const KEY = "ariarian:v4";
 
@@ -156,6 +157,14 @@ function reducer(s: State, a: Action): State {
       return { ...s, workOrders: [a.wo, ...s.workOrders.filter((w) => w.id !== a.wo.id)] };
     case "editWorkOrder":
       return { ...s, seq, workOrders: s.workOrders.map((w) => w.id === a.wo.id ? a.wo : w), audit: [audit(s, { assetId: a.wo.assetId, action: "Updated", note: `Work order ${a.wo.id}` }), ...s.audit] };
+    case "auditPhysicalCount": {
+      const asset = s.assets.find((x) => x.id === a.assetId);
+      const assets = asset && a.condition
+        ? s.assets.map((x) => x.id === a.assetId ? { ...x, condition: a.condition! } : x)
+        : s.assets;
+      const note = a.note ?? (a.condition ? `Physical count verified • Condition: ${a.condition}` : "Audited");
+      return { ...s, seq, assets, audit: [audit(s, { assetId: a.assetId, action: "Audited", note }), ...s.audit] };
+    }
     case "upsertEmployee": {
       const employees = a.isNew ? [a.employee, ...s.employees] : s.employees.map((e) => e.id === a.employee.id ? a.employee : e);
       const n = a.isNew ? [notify({ ...s, seq }, { kind: "people", title: "Employee added", body: `${a.employee.name} joined DOST ${a.employee.office} as ${a.employee.position}` }), ...s.notifications] : s.notifications;

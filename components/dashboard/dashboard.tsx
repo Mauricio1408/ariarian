@@ -8,10 +8,10 @@ import { Activity, ArrowRight, Package, Shield, TriangleAlert } from "lucide-rea
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { AS_OF } from "@/lib/types";
-import type { PhysicalCondition } from "@/lib/types";
+import type { PhysicalCondition, AssetCategory } from "@/lib/types";
 import { byKey, overview, warrantyByYear, openOrders } from "@/lib/selectors";
-import { longDate, monthDay, phpShort } from "@/lib/format";
-import { CountUp, Sparkbars } from "@/components/ui/primitives";
+import { longDate, monthDay, php, phpShort } from "@/lib/format";
+import { CATEGORY_ICON, CountUp, Sparkbars } from "@/components/ui/primitives";
 import { T } from "@/components/ui/motion";
 import { BarRows, Columns, Donut, Stacked } from "./charts";
 import { ATTENTION, DashCard, HEALTH_COLOR, useAgencyRows, type View } from "./shared";
@@ -81,6 +81,8 @@ function Grid({ onOpen }: { onOpen: (v: View) => void }) {
         <AttentionCard onOpen={() => onOpen("attention")} />
         <WarrantyCard onOpen={() => onOpen("warranty")} />
       </div>
+
+      <AssetsByCategory />
     </div>
   );
 }
@@ -211,3 +213,72 @@ function WarrantyCard({ onOpen }: { onOpen: () => void }) {
   );
 }
 
+
+
+/* ── Assets by Category (Figma 4749:2075) ───────────────────────── */
+function AssetsByCategory() {
+  const { state } = useStore();
+  const categories: AssetCategory[] = ["Hardware", "Software", "Vehicles", "Office", "Appliances", "Others"];
+
+  const catCounts: Record<string, number> = {};
+  const catTotals: Record<string, number> = {};
+  for (const c of categories) {
+    catCounts[c] = 0;
+    catTotals[c] = 0;
+  }
+  for (const a of state.assets) {
+    if (catCounts[a.category] !== undefined) {
+      catCounts[a.category]++;
+      catTotals[a.category] += a.cost;
+    }
+  }
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ ...T.page, delay: 0.32 }}
+      className="mt-8 mb-6"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="t-h3 text-[22px]">Assets by Category</h2>
+          <p className="text-[13px] text-ink-2 mt-0.5">Asset valuation and inventory breakdown across categories (Figma Frame 01)</p>
+        </div>
+        <Link href="/assets" className="t-b2 text-brand-600 hover:text-brand-700 flex items-center gap-1 font-medium">
+          View full registry <ArrowRight size={14} />
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-3 gap-5">
+        {categories.map((cat) => {
+          const I = CATEGORY_ICON[cat];
+          const count = catCounts[cat] ?? 0;
+          const total = catTotals[cat] ?? 0;
+          return (
+            <Link
+              key={cat}
+              href={`/assets?category=${cat}`}
+              className="group card-flat p-5 hover:shadow-lift hover:border-brand-200 transition-all duration-[120ms] flex flex-col justify-between h-[154px] bg-white relative overflow-hidden"
+            >
+              <div className="flex items-start justify-between">
+                <div className="size-11 rounded-xl bg-brand-50 text-brand-600 grid place-items-center group-hover:bg-brand-500 group-hover:text-white transition-colors">
+                  <I size={22} strokeWidth={1.8} />
+                </div>
+                <span className="text-[12px] font-medium text-ink-3">
+                  {count} {count === 1 ? "asset" : "assets"}
+                </span>
+              </div>
+              <div>
+                <p className="text-[20px] font-bold text-ink tnum tracking-[-0.01em]">
+                  {php(total)}
+                </p>
+                <p className="text-[13px] text-ink-2 font-medium mt-0.5">{cat}</p>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </motion.section>
+  );
+}

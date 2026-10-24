@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-import { Bell, Box, Clock, Coins, LayoutGrid, LogOut, PanelLeft, PanelLeftOpen, RotateCcw, Settings, User, UserRound, Inbox, Wrench } from "lucide-react";
+import { Bell, Box, Clock, Coins, LayoutGrid, LogOut, PanelLeft, PanelLeftOpen, RotateCcw, ScanLine, Settings, User, UserRound, Inbox, Wrench } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
@@ -29,6 +29,7 @@ export function Sidebar() {
   const main: Item[] = [
     { href: "/", label: "Dashboard", icon: LayoutGrid, match: (p) => p === "/" },
     { href: "/assets", label: "Asset Inventory", icon: Box },
+    { href: "/physical-count", label: "Physical Count", icon: ScanLine },
     { href: "/employees", label: "Employees", icon: User },
     { href: "/audit-log", label: "Audit Log", icon: Clock },
     { href: "/maintenance", label: "Maintenance", icon: Wrench, badge: triage, badgeTone: "warn" },
