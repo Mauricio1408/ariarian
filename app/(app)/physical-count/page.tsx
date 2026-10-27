@@ -151,7 +151,7 @@ function PhysicalCount() {
                     </button>
                     <div className="w-full text-center flex flex-col gap-2">
                       <p className="text-[20px] font-semibold leading-[1.3] tracking-[-0.01em] text-white">Point at the asset tag</p>
-                      <p className="text-[14px] leading-[1.4] text-scan-ink">DOST-YYYY-NNNN</p>
+                      <p className="text-[14px] leading-[1.4] text-scan-ink">DOST-CAT-NNN</p>
                       <p className="text-[14px] leading-[1.4] text-scan-ink">Keep the label inside the frame.</p>
                     </div>
                     <button type="button" onClick={() => setFlash((f) => !f)} aria-pressed={flash}
@@ -164,7 +164,7 @@ function PhysicalCount() {
                       <Button variant="record" size="rec" className="w-full" onClick={() => setManual("")}>Enter tag manually</Button>
                     ) : (
                       <form onSubmit={(e) => { e.preventDefault(); lookup(); }} className="flex gap-2">
-                        <input autoFocus value={manual} onChange={(e) => { setManual(e.target.value); setManualError(false); }} placeholder="DOST-2023-0117"
+                        <input autoFocus value={manual} onChange={(e) => { setManual(e.target.value); setManualError(false); }} placeholder="DOST-HAR-004"
                           className={cn("flex-1 min-w-0 h-10 px-3 rounded-[6px] border bg-white text-[15px] outline-none focus:shadow-[0_0_0_3px_var(--color-brand-100)]", manualError ? "border-bad-text" : "border-rule focus:border-brand-500")} />
                         <Button type="submit" variant="primary" size="rec">Find</Button>
                       </form>
@@ -199,7 +199,7 @@ function PhysicalCount() {
                         <p className="text-[12px] leading-[1.4] text-ink-2">{current.serial} · {current.category}</p>
                       </div>
                     </div>
-                    <p className="text-[14px] font-medium leading-[1.4] text-brand-700">Matched tag · {current.id}</p>
+                    <p className="text-[14px] font-medium leading-[1.4] text-brand-700">Matched tag · {current.tag}</p>
                     <RecordDivider />
                     <div className="flex flex-col gap-1.5 leading-[1.4]">
                       <p className="text-[12px] text-ink-2">CUSTODIAN</p>
