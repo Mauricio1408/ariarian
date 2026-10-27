@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { Sidebar } from "@/components/shell/sidebar";
 import { ShellProvider } from "@/components/shell/shell-context";
@@ -11,6 +11,8 @@ import { SettingsModal } from "@/components/shell/settings-modal";
 export default function AppLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const { state, hydrated } = useStore();
   const router = useRouter();
+  // The physical count is a field flow: on phones it runs full-screen without the sidebar.
+  const field = usePathname().startsWith("/physical-count");
   // The prototype starts at sign-in: no session → /login.
   useEffect(() => { if (hydrated && !state.session) router.replace("/login"); }, [hydrated, state.session, router]);
   if (!hydrated || !state.session) return <div className="min-h-screen bg-page" />;
@@ -18,7 +20,7 @@ export default function AppLayout({ children }: Readonly<{ children: React.React
   return (
     <ShellProvider>
       <div className="flex min-h-screen">
-        <Sidebar />
+        <div className={field ? "hidden md:flex" : "contents"}><Sidebar /></div>
         <div className="flex-1 min-w-0">{children}</div>
       </div>
       <NotificationsPanel />

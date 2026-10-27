@@ -48,7 +48,7 @@ type Action =
   | { type: "editWorkOrder"; wo: WorkOrder }
   | { type: "auditPhysicalCount"; assetId: string; condition?: PhysicalCondition; note?: string };
 
-const KEY = "ariarian:v4";
+const KEY = "ariarian:v5";
 
 // Dev only: a preview pane loaded hidden throttles timers, so Motion would crawl — skip animation there.
 if (process.env.NODE_ENV === "development" && typeof window !== "undefined" && (window as unknown as { __ARIARIAN_HIDDEN__?: number }).__ARIARIAN_HIDDEN__) {
@@ -126,8 +126,13 @@ function reducer(s: State, a: Action): State {
         ? s.assets.map((x) => x.id === wo.assetId ? { ...x, operational: "Maintenance" as const } : x) : s.assets;
       return { ...s, seq, workOrders, assets, audit: [audit(s, { assetId: wo.assetId, action: "Updated", note: a.stage === "in_repair" ? "Moved to In repair" : "Moved back to Reported" }), ...s.audit] };
     }
-    case "clearConflict":
-      return { ...s, workOrders: s.workOrders.map((w) => w.id === a.woId ? { ...w, conflict: undefined } : w) };
+    case "clearConflict": {
+      // "Refresh details" loads the record as the server has it: the asset now sits with the new custodian.
+      const wo = s.workOrders.find((w) => w.id === a.woId);
+      const to = wo?.conflict ? s.employees.find((e) => e.name === wo.conflict!.to) : undefined;
+      const assets = wo && to ? s.assets.map((x) => x.id === wo.assetId ? { ...x, custodianId: to.id } : x) : s.assets;
+      return { ...s, assets, workOrders: s.workOrders.map((w) => w.id === a.woId ? { ...w, conflict: undefined } : w) };
+    }
     case "newWorkOrder": {
       const id = `WO-${2000 + seq}`;
       const assets = s.assets.map((x) => x.id === a.wo.assetId && x.operational === "In Use" ? { ...x, operational: "Maintenance" as const } : x);

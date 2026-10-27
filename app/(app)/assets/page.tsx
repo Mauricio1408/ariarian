@@ -3,30 +3,31 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Box, CircleDot, FileText, Maximize2, Pencil, Plus, Repeat, Search, Send, Tag, Trash2, Upload } from "lucide-react";
+import { Box, Plus, Search, Upload } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { ASSET_CATEGORY, OPERATIONAL_STATUS, PHYSICAL_CONDITION } from "@/lib/types";
+import { ASSET_CATEGORY, OPERATIONAL_STATUS } from "@/lib/types";
+import type { Asset, AssetCategory, OperationalStatus } from "@/lib/types";
 import { CATEGORY_ICON } from "@/components/ui/primitives";
-import type { Asset } from "@/lib/types";
-import { AGENCIES } from "@/lib/seed";
 import { formType } from "@/lib/selectors";
-import { phpExact } from "@/lib/format";
+import { php } from "@/lib/format";
 import { useExport } from "@/lib/use-export";
-import { Page, PageTitle } from "@/components/shell/topbar";
-import { Button, CategoryChip, Checkbox, IconButton, OPERATIONAL_TEXT, Skeleton, Thumb } from "@/components/ui/primitives";
-import { ResizableHeader, TableScroll, useColumns } from "@/components/ui/columns";
-import { FIELD_ICON as F } from "@/lib/field-icons";
-import { ExportButton, FilterChips, FilterMenu, Pager, SearchBox, SortMenu, Th, rowMotion, type FilterValue } from "@/components/ui/table";
+import { Page } from "@/components/shell/topbar";
+import { Button, Skeleton, Thumb } from "@/components/ui/primitives";
+import { ExportButton, FilterChips, type FilterValue } from "@/components/ui/table";
+import { ChoiceButton, RecordCard, RecordHeading, RecordPagination, RecordSearch } from "@/components/ui/record-kit";
 import { T } from "@/components/ui/motion";
 import { AssetDrawer } from "@/components/assets/asset-drawer";
+import { AssetReadOnlyModal, AssetSplitPanel } from "@/components/assets/asset-panels";
+import { OP_TONE, StatusPill } from "@/components/assets/record";
 import { TransferModal } from "@/components/assets/transfer-modal";
 import { AssetFormModal, DeleteAssetFlow } from "@/components/assets/asset-form-modal";
 import type { ExportFormat } from "@/lib/export";
-import { BulkBar } from "@/components/ui/bulk-bar";
 
 const PER = 10;
-type SortKey = "name" | "category" | "serial" | "operational" | "condition" | "cost";
+// Column widths from Figma 4773:1908 (list) and 4773:2065 (split view).
+const LIST_COLS = [108, 168, 150, 130, 72] as const;
+const SPLIT_COLS = [110, 80] as const;
 
 export default function AssetsPage() {
   return (
@@ -37,33 +38,32 @@ export default function AssetsPage() {
 }
 
 function Registry() {
-  const { state, dispatch, toast, issueForms } = useStore();
+  const { state, dispatch, toast } = useStore();
   const params = useSearchParams();
   const router = useRouter();
   const path = usePathname();
   const doExport = useExport();
 
   const [q, setQ] = useState(params.get("q") ?? "");
-  const [filters, setFilters] = useState<FilterValue>(() => {
+  // Category and Status are the toolbar choices; agency and condition arrive from dashboard drill-downs.
+  const [category, setCategory] = useState<AssetCategory | null>((params.get("category") as AssetCategory) ?? null);
+  const [status, setStatus] = useState<OperationalStatus | null>((params.get("status") as OperationalStatus) ?? null);
+  const [extra, setExtra] = useState<FilterValue>(() => {
     const f: FilterValue = {};
     if (params.get("agency")) f.agency = [params.get("agency")!];
     if (params.get("condition")) f.condition = [params.get("condition")!];
-    if (params.get("status")) f.status = [params.get("status")!];
-    if (params.get("category")) f.category = [params.get("category")!];
     return f;
   });
-  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const cols = useColumns("assets", [{ w: 44, fixed: true }, { w: 220, min: 160 }, { w: 166, min: 150 }, { w: 160 }, { w: 160 }, { w: "fr" }, { w: 160, min: 150 }]);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [transfer, setTransfer] = useState<string[] | null>(null);
   const [form, setForm] = useState<{ asset: Asset | null } | null>(null);
   const [deleting, setDeleting] = useState<string[] | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const openId = params.get("asset");
+  const selectedId = params.get("selected");
 
-  // The Loading state (Figma 4592:31435) on first paint and on every page turn.
+  // Loading skeleton (Figma 4773:5300) on first paint and on every page turn.
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const load = (ms = 420) => { setLoading(true); clearTimeout(timer.current); timer.current = setTimeout(() => setLoading(false), ms); };
   useEffect(() => { timer.current = setTimeout(() => setLoading(false), 650); return () => clearTimeout(timer.current); }, []);
@@ -77,151 +77,140 @@ function Registry() {
   const assets = useMemo(() => (state.registryEmpty ? [] : state.assets), [state.registryEmpty, state.assets]);
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    let r = assets.filter((a) =>
+    return assets.filter((a) =>
       (!needle || `${a.name} ${a.serial} ${a.tag} ${a.id}`.toLowerCase().includes(needle)) &&
-      (!filters.category?.length || filters.category.includes(a.category)) &&
-      (!filters.status?.length || filters.status.includes(a.operational)) &&
-      (!filters.condition?.length || filters.condition.includes(a.condition)) &&
-      (!filters.agency?.length || filters.agency.includes(a.agency)));
-    if (sort) {
-      const k = sort.key, d = sort.dir === "asc" ? 1 : -1;
-      const val = (a: Asset) => (k === "operational" ? a.operational : k === "condition" ? PHYSICAL_CONDITION.indexOf(a.condition) : a[k]);
-      r = [...r].sort((a, b) => (val(a) > val(b) ? d : val(a) < val(b) ? -d : 0));
-    }
-    return r;
-  }, [assets, q, filters, sort]);
+      (!category || a.category === category) &&
+      (!status || a.operational === status) &&
+      (!extra.condition?.length || extra.condition.includes(a.condition)) &&
+      (!extra.agency?.length || extra.agency.includes(a.agency)));
+  }, [assets, q, category, status, extra]);
 
   const pages = Math.max(1, Math.ceil(rows.length / PER));
   const p = Math.min(page, pages);
   const shown = rows.slice((p - 1) * PER, p * PER);
   const pageTotal = shown.reduce((s, a) => s + a.cost, 0);
-  const allOnPage = shown.length > 0 && shown.every((a) => selected.has(a.id));
-  const someOnPage = shown.some((a) => selected.has(a.id));
-  const filtered = q.trim() !== "" || Object.values(filters).some((v) => v.length);
+  const selected = selectedId ? assets.find((a) => a.id === selectedId) : undefined;
+  const split = !!selected;
+  const custodian = state.role === "custodian";
 
-  const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const remove = (ids: string[]) => setDeleting(ids);
-  const issue = (a: Asset) => {
-    if (!a.custodianId) { toast({ title: "Assign a custodian first", body: "A PAR or ICS is issued to a person", tone: "bad" }); return; }
-    const ids = issueForms(a.custodianId, [a.id]);
-    toast({ title: `${formType(a)} issued for ${a.name}`, body: `${ids[0]} • ₱50,000 threshold applied`, tone: "good" });
-    router.push(`/forms/${ids[0]}`);
-  };
+  const clearAll = () => { setQ(""); setCategory(null); setStatus(null); setExtra({}); setPage(1); };
   const exportRows = (list: Asset[], fmt: ExportFormat = "csv") => doExport("asset-registry", ["Property No.", "Name", "Category", "Serial", "Operational", "Physical", "Agency", "Office", "Cost"],
     list.map((a) => [a.id, a.name, a.category, a.serial, a.operational, a.condition, a.agency, a.office, a.cost]), fmt);
 
   return (
     <>
-      <PageTitle title="Global Asset Registry" sub="Last Updated: March 14, 2026" />
-      <section className="card-raised px-4 pt-5 pb-2">
-        {/* Toolbar */}
-        <div className="flex items-center gap-4">
-          <SearchBox value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search by asset name, serial, or tag" className="w-[440px]" />
-          <div className="ml-6"><Pager page={p} pages={pages} onPage={(n) => { setPage(n); load(); }} /></div>
-          <div className="ml-auto flex items-center gap-[18px]">
-            <SortMenu value={sort} onChange={setSort} options={[{ key: "name", label: "Name", icon: Pencil }, { key: "category", label: "Asset type", icon: Box }, { key: "serial", label: "Serial ID", icon: Tag }, { key: "operational", label: "Operational", icon: CircleDot }, { key: "condition", label: "Physical condition", icon: Box }, { key: "cost", label: "Value", icon: Tag }]} />
-            <FilterMenu value={filters} onChange={(v) => { setFilters(v); setPage(1); }} groups={[
-              { key: "category", label: "Asset type", options: [...ASSET_CATEGORY], icons: CATEGORY_ICON },
-              { key: "status", label: "Operational", options: OPERATIONAL_STATUS.slice(0, 4) as unknown as string[] },
-              { key: "condition", label: "Physical", options: [...PHYSICAL_CONDITION] },
-              { key: "agency", label: "Agency", options: AGENCIES.map((g) => g.code) },
-            ]} />
-            <Button variant="primary" iconRight={Plus} onClick={() => setForm({ asset: null })}>Add Asset</Button>
-            <ExportButton onPick={(f) => exportRows(rows, f)} />
-          </div>
-        </div>
-        <FilterChips value={filters} onChange={(v) => { setFilters(v); setPage(1); }} />
+      <RecordHeading title="Global Asset Registry"
+        sub={`${assets.length} total assets · Last updated March 14, 2026`}
+        right={<Button variant="primary" size="rec" onClick={() => setForm({ asset: null })}>Add asset</Button>} />
 
-        <TableScroll>
-        {/* Header */}
-        <ResizableHeader cols={cols} className="h-[42px] mt-2 dash-b px-3">
-          <Checkbox checked={allOnPage} indeterminate={!allOnPage && someOnPage} label="Select page"
-            onChange={() => setSelected((s) => { const n = new Set(s); shown.forEach((a) => (allOnPage ? n.delete(a.id) : n.add(a.id))); return n; })} />
-          <Th icon={F.name}>Asset Name</Th><Th icon={F.type}>Asset Type</Th><Th icon={F.serial}>Serial ID</Th><Th icon={F.operational}>Operational</Th><Th icon={F.physical}>Physical</Th>
-          <Th icon={F.status} className="justify-end pr-3">Actions</Th>
-        </ResizableHeader>
+      {/* Search and filters */}
+      <div className="flex items-center gap-3 mt-6">
+        <RecordSearch value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search by asset name, serial, or tag" className="flex-1" />
+        <ChoiceButton label="Category" value={category} options={ASSET_CATEGORY} icons={CATEGORY_ICON} onPick={(v) => { setCategory(v); setPage(1); }} />
+        <ChoiceButton label="Status" value={status} options={OPERATIONAL_STATUS} onPick={(v) => { setStatus(v); setPage(1); }} align="right" />
+        <ExportButton record onPick={(f) => exportRows(rows, f)} />
+      </div>
+      <FilterChips value={extra} onChange={(v) => { setExtra(v); setPage(1); }} />
 
-        {/* Body */}
-        <div className="relative min-h-[200px]">
-          <AnimatePresence mode="wait" initial={false}>
-            {loading ? (
-              <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
-                {Array.from({ length: Math.max(1, Math.min(PER, shown.length || 8)) }).map((_, i) => (
-                  <div key={i} className="grid items-center h-12 border-b border-line px-3" style={{ ...cols.style, opacity: 1 - i * 0.07 }}>
-                    <Skeleton className="size-4" /><span className="flex items-center gap-3"><Skeleton className="size-7" /><Skeleton className="h-3 w-28" /></span>
-                    <Skeleton className="h-3 w-24" /><Skeleton className="h-3 w-24" /><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-24 ml-auto" />
-                  </div>
-                ))}
-              </motion.div>
-            ) : shown.length === 0 ? (
-              <EmptyState key="empty" filtered={filtered} q={q} total={assets.length}
-                onClear={() => { setQ(""); setFilters({}); }} onSearchAll={() => setFilters({})} onAdd={() => setForm({ asset: null })}
-                onImport={() => { dispatch({ type: "registryEmpty", on: false }); toast({ title: "Imported procurement CSV", body: `${state.assets.length} assets restored`, tone: "good" }); load(700); }} />
-            ) : (
-              <motion.div key={`page-${p}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.1 } }}>
-                <AnimatePresence initial={false} mode="popLayout">
-                  {shown.map((a, i) => {
-                    const sel = selected.has(a.id);
-                    return (
-                      <motion.div key={a.id} {...rowMotion(i)} onClick={() => setParam("asset", a.id)} style={cols.style}
-                        className={cn("group relative grid items-center h-12 border-b border-line px-3 cursor-pointer transition-colors duration-[120ms]",
-                          sel ? "bg-brand-50" : "hover:bg-tint", flash === a.id && "bg-good-soft/50")}>
-                        <Checkbox checked={sel} onChange={() => toggle(a.id)} label={`Select ${a.name}`} />
-                        <span className="flex items-center gap-3 min-w-0 pr-2"><Thumb src={a.photo} category={a.category} size={28} /><span className="text-[15px] font-medium truncate">{a.name}</span></span>
-                        <span><CategoryChip category={a.category} /></span>
-                        <span className="t-b1 tnum truncate pr-2">{a.serial}</span>
-                        <span className={cn("t-b1", OPERATIONAL_TEXT[a.operational])}>{a.operational}</span>
-                        <span className="t-b1">{a.condition}</span>
-                        <span className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                          <IconButton icon={Maximize2} label="Open details" onClick={() => setParam("asset", a.id)} className="text-ink" />
-                          <IconButton icon={Send} label={`Issue ${formType(a)}`} onClick={() => issue(a)} className="text-brand-500 hover:bg-brand-50" />
-                          <IconButton icon={Pencil} label="Edit" onClick={() => setForm({ asset: a })} className="text-good-text hover:bg-good-soft/40" />
-                          <IconButton icon={Trash2} label="Delete" onClick={() => remove([a.id])} className="text-bad-text hover:bg-bad-soft/40" />
-                        </span>
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        </TableScroll>
-
-        {/* Footer */}
-        {assets.length > 0 && (
-          <>
-            <button onClick={() => setForm({ asset: null })} aria-label="Add asset" className="group flex items-center h-12 w-full px-3 border-b border-line text-ink hover:bg-tint cursor-pointer transition-colors">
-              <Plus size={18} /><span className="ml-3 t-b2 text-ink-2 opacity-0 group-hover:opacity-100 transition-opacity">Add asset</span>
-            </button>
-            <div className="flex items-center h-12 px-4 border-b border-line">
-              <span className="text-[16px] font-semibold tnum">Showing {shown.length} of {rows.length}{filtered ? ` (filtered from ${assets.length})` : ""}</span>
-              <span className="ml-auto text-[16px] font-semibold tnum">Total: <motion.span key={pageTotal} initial={{ opacity: 0.4 }} animate={{ opacity: 1 }}>{phpExact(pageTotal)}</motion.span></span>
+      <div className="flex gap-3 items-start mt-6">
+        <div className="flex-1 min-w-0 flex flex-col gap-3">
+          <RecordCard>
+            {/* Column labels */}
+            <div className="flex items-center h-[42px] px-4 bg-head text-[12px] leading-[1.4] text-ink-2">
+              <span className="flex-1 min-w-0">Asset</span>
+              {split ? (
+                <><span style={{ width: SPLIT_COLS[0] }}>Status</span><span style={{ width: SPLIT_COLS[1] }}>Condition</span></>
+              ) : (
+                <>
+                  <span style={{ width: LIST_COLS[0] }}>Category</span><span style={{ width: LIST_COLS[1] }}>Serial ID</span>
+                  <span style={{ width: LIST_COLS[2] }}>Operational status</span><span style={{ width: LIST_COLS[3] }}>Physical condition</span>
+                  <span style={{ width: LIST_COLS[4] }}>Action</span>
+                </>
+              )}
             </div>
-          </>
-        )}
-      </section>
 
-      <BulkBar count={selected.size} onClear={() => setSelected(new Set())} actions={[
-        { label: "Transfer assets", icon: Repeat, run: () => setTransfer([...selected]) },
-        { label: "Generate PAR/ICS", icon: FileText, run: () => {
-          const ids = [...selected]; const first = state.assets.find((a) => a.id === ids[0]);
-          const holder = first?.custodianId; if (!holder) return;
-          const formIds = issueForms(holder, ids.filter((id) => state.assets.find((a) => a.id === id)?.custodianId === holder));
-          toast({ title: `${formIds.length} form${formIds.length > 1 ? "s" : ""} generated`, body: formIds.join(" • "), tone: "good" });
-          router.push(`/forms/${formIds[0]}`);
-        } },
-        { label: "Export", run: () => exportRows(state.assets.filter((a) => selected.has(a.id))) },
-        { label: "Delete", icon: Trash2, danger: true, run: () => remove([...selected]) },
-      ]} />
+            <div className="relative min-h-[240px]">
+              <AnimatePresence mode="wait" initial={false}>
+                {loading ? (
+                  <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+                    {Array.from({ length: Math.max(1, Math.min(PER, shown.length || 8)) }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-2.5 h-[60px] px-4 border-b border-rule" style={{ opacity: 1 - i * 0.07 }}>
+                        <Skeleton className="size-9 rounded-[8px]" /><Skeleton className="h-3 w-40" />
+                        <span className="flex-1" /><Skeleton className="h-6 w-24 rounded-full" /><Skeleton className="h-3 w-16 ml-8" />
+                      </div>
+                    ))}
+                  </motion.div>
+                ) : shown.length === 0 ? (
+                  <EmptyState key="empty" q={q} filtered={!!category || !!status || Object.values(extra).some((v) => v.length)} total={assets.length}
+                    onClear={clearAll} onSearchAll={() => { setCategory(null); setStatus(null); setExtra({}); }} onAdd={() => setForm({ asset: null })}
+                    onImport={() => { dispatch({ type: "registryEmpty", on: false }); toast({ title: "Imported procurement CSV", body: `${state.assets.length} assets restored`, tone: "good" }); load(700); }} />
+                ) : (
+                  <motion.div key={`page-${p}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.1 } }}>
+                    {shown.map((a) => {
+                      const sel = selectedId === a.id;
+                      return (
+                        <div key={a.id} role="button" tabIndex={0} aria-pressed={sel}
+                          onClick={() => setParam("selected", sel ? null : a.id)}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setParam("selected", sel ? null : a.id); } }}
+                          className={cn("flex items-center h-[60px] px-4 border-b border-rule cursor-pointer outline-none transition-colors duration-[120ms] focus-visible:bg-brand-50",
+                            sel ? "bg-pick shadow-[inset_3px_0_0_var(--color-brand-500)]" : "bg-white hover:bg-tint", flash === a.id && "bg-good-soft/50")}>
+                          <span className="flex-1 min-w-0 flex items-center gap-2.5 pr-3">
+                            <Thumb src={a.photo} category={a.category} size={36} className="rounded-[8px]" />
+                            <span className="min-w-0 flex flex-col gap-0.5 leading-[1.4]">
+                              <span className="text-[14px] font-medium text-deep truncate">{a.name}</span>
+                              {split && <span className="text-[12px] text-ink-2 truncate">{a.serial}</span>}
+                            </span>
+                          </span>
+                          {split ? (
+                            <>
+                              <span style={{ width: SPLIT_COLS[0] }}><StatusPill size="sm" tone={OP_TONE[a.operational]}>{a.operational}</StatusPill></span>
+                              <span style={{ width: SPLIT_COLS[1] }} className="text-[12px] text-deep">{a.condition}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span style={{ width: LIST_COLS[0] }} className="px-4 text-[14px] text-n-600 truncate">{a.category}</span>
+                              <span style={{ width: LIST_COLS[1] }} className="px-4 text-[14px] text-n-600 truncate">{a.serial}</span>
+                              <span style={{ width: LIST_COLS[2] }}><StatusPill size="sm" tone={OP_TONE[a.operational]}>{a.operational}</StatusPill></span>
+                              <span style={{ width: LIST_COLS[3] }} className="text-[14px] text-deep">{a.condition}</span>
+                              <button type="button" style={{ width: LIST_COLS[4] }} onClick={(e) => { e.stopPropagation(); setParam("asset", a.id); }}
+                                className="text-left text-[14px] font-medium text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 cursor-pointer">View →</button>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
-      <AssetDrawer assetId={openId} onClose={() => setParam("asset", null)} onTransfer={(id) => setTransfer([id])} onEdit={(a) => setForm({ asset: a })} />
-      <TransferModal open={!!transfer} assetIds={transfer ?? []} onClose={() => setTransfer(null)} onDone={() => setSelected(new Set())} />
-      <DeleteAssetFlow assetIds={deleting} onClose={() => setDeleting(null)} onDeleted={() => { setSelected(new Set()); setParam("asset", null); }} />
+            {assets.length > 0 && (
+              <RecordPagination page={p} pages={pages} from={(p - 1) * PER + 1} to={(p - 1) * PER + shown.length} total={rows.length} noun="assets" per={PER}
+                onPage={(n) => { setPage(n); load(); }} />
+            )}
+          </RecordCard>
+
+          {assets.length > 0 && (
+            <div className="flex items-start justify-between leading-[1.4]">
+              <p className="text-[12px] text-ink-2">Visible-page value only · not the portfolio total</p>
+              <motion.p key={pageTotal} initial={{ opacity: 0.4 }} animate={{ opacity: 1 }} className="text-[14px] font-medium text-deep tnum">{php(pageTotal)}</motion.p>
+            </div>
+          )}
+        </div>
+
+        <AssetSplitPanel asset={selected} onClose={() => setParam("selected", null)} onOpen={(id) => setParam("asset", id)} />
+      </div>
+
+      {custodian ? (
+        <AssetReadOnlyModal asset={openId ? state.assets.find((a) => a.id === openId) : undefined} onClose={() => setParam("asset", null)} />
+      ) : (
+        <AssetDrawer assetId={openId} onClose={() => setParam("asset", null)} onTransfer={(id) => setTransfer([id])} onEdit={(a) => setForm({ asset: a })} onDelete={(a) => setDeleting([a.id])} />
+      )}
+      <TransferModal open={!!transfer} assetIds={transfer ?? []} onClose={() => setTransfer(null)} />
+      <DeleteAssetFlow assetIds={deleting} onClose={() => setDeleting(null)} onDeleted={() => { setParam("asset", null); }} />
       <AssetFormModal open={!!form} asset={form?.asset ?? null} onClose={() => setForm(null)}
         onSaved={(a, isNew) => {
-          if (isNew) { setQ(""); setFilters({}); setSort(null); setPage(1); }
+          if (isNew) { clearAll(); }
           setFlash(a.id); setTimeout(() => setFlash(null), 1600);
           toast({ title: isNew ? `${a.name} registered` : `${a.name} updated`, body: isNew ? `${a.id} • ${formType(a)} applies` : "Changes saved to the registry", tone: "good" });
         }} />
@@ -229,30 +218,31 @@ function Registry() {
   );
 }
 
-function EmptyState({ filtered, q, total, onClear, onSearchAll, onAdd, onImport }: {
-  filtered: boolean; q: string; total: number; onClear: () => void; onSearchAll: () => void; onAdd: () => void; onImport: () => void;
+/** Empty registry (Figma 4773:4704) and No results (4773:5002), restyled into the record card. */
+function EmptyState({ q, filtered, total, onClear, onSearchAll, onAdd, onImport }: {
+  q: string; filtered: boolean; total: number; onClear: () => void; onSearchAll: () => void; onAdd: () => void; onImport: () => void;
 }) {
   const { state } = useStore();
   const qMatches = q ? state.assets.filter((a) => `${a.name} ${a.serial} ${a.tag}`.toLowerCase().includes(q.toLowerCase())) : [];
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={T.page} className="py-16 text-center">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={T.page} className="py-16 px-6 text-center">
       <motion.span initial={{ scale: 0.7, rotate: -8 }} animate={{ scale: 1, rotate: 0 }} transition={T.spring}
-        className={cn("inline-grid place-items-center size-14 rounded-xl", total === 0 ? "bg-brand-100 text-brand-600" : "bg-tint text-ink")}>
-        {total === 0 ? <Plus size={22} /> : <Search size={20} />}
+        className={cn("inline-grid place-items-center size-12 rounded-[12px]", total === 0 ? "bg-brand-100 text-brand-600" : "bg-head border border-rule text-ink-2")}>
+        {total === 0 ? <Plus size={20} /> : <Search size={19} />}
       </motion.span>
       {total === 0 ? (
         <>
-          <h3 className="text-[20px] font-semibold mt-3">No assets registered yet</h3>
+          <h3 className="text-[20px] font-semibold text-deep mt-3">No assets registered yet</h3>
           <p className="t-b2 text-ink-2 max-w-[420px] mx-auto mt-1">Register your first asset, or import the procurement CSV to bring an existing inventory in. Every asset needs a custodian before it can be issued a PAR or ICS.</p>
-          <div className="flex justify-center gap-2.5 mt-4"><Button variant="primary" onClick={onAdd}>Add Asset</Button><Button icon={Upload} onClick={onImport}>Import CSV</Button></div>
+          <div className="flex justify-center gap-3 mt-5"><Button variant="primary" size="rec" onClick={onAdd}>Add asset</Button><Button variant="record" size="rec" icon={Upload} onClick={onImport}>Import CSV</Button></div>
         </>
       ) : (
         <>
-          <h3 className="text-[20px] font-semibold mt-3">No assets match these filters</h3>
+          <h3 className="text-[20px] font-semibold text-deep mt-3">No assets match these filters</h3>
           <p className="t-b2 text-ink-2 max-w-[440px] mx-auto mt-1">
             {q ? <>“{q}”{filtered ? " with the current filters" : ""} returns nothing.{qMatches.length > 0 && ` ${qMatches.length} of the ${total} assets match “${q}” — ${qMatches.map((a) => a.condition).filter((v, i, xs) => xs.indexOf(v) === i).join(", ")} condition.`}</> : "Try removing a filter to widen the search."}
           </p>
-          <div className="flex justify-center gap-2.5 mt-4"><Button onClick={onClear}>Clear filters</Button>{q && <Button onClick={onSearchAll}>Search all assets</Button>}</div>
+          <div className="flex justify-center gap-3 mt-5"><Button variant="record" size="rec" onClick={onClear}>Clear filters</Button>{q && filtered && <Button variant="record" size="rec" onClick={onSearchAll}>Search all assets</Button>}</div>
         </>
       )}
     </motion.div>

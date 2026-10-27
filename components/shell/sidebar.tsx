@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-import { Bell, Box, Clock, Coins, LayoutGrid, LogOut, PanelLeft, PanelLeftOpen, RotateCcw, ScanLine, Settings, User, UserRound, Inbox, Wrench } from "lucide-react";
+import { Bell, Box, ClipboardCheck, Clock, Coins, LayoutGrid, LogOut, PanelLeft, PanelLeftOpen, RotateCcw, ScanLine, Settings, User, UserRound, Inbox, Wrench } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
@@ -104,6 +104,9 @@ export function Sidebar() {
               </MenuButton>
               <MenuButton icon={Inbox} onClick={() => { dispatch({ type: "registryEmpty", on: !state.registryEmpty }); setMenu(false); router.push("/assets"); }}>
                 {state.registryEmpty ? "Restore registry" : "Preview empty registry"}
+              </MenuButton>
+              <MenuButton icon={ClipboardCheck} onClick={() => { setMenu(false); router.push("/physical-count?step=complete"); }}>
+                Jump to physical count review
               </MenuButton>
               <MenuButton icon={RotateCcw} onClick={() => { dispatch({ type: "reset" }); setMenu(false); toast({ title: "Demo data reset", body: "Every screen is back to March 14, 2026", tone: "good" }); }}>
                 Reset demo data

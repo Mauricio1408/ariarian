@@ -117,8 +117,8 @@ function AgencyCard({ onOpen }: { onOpen: () => void }) {
     <DashCard id="split" icon={Package} title="Agency Inventory Split" onToggle={onOpen} className="h-[350px]" delay={0.1}>
       <div className="px-6 pt-2">
         <div className="flex justify-between t-b2 text-ink-2 mb-2"><span>{total} assets across {rows.length} agencies</span><span>As of {monthDay(AS_OF)}, 2026</span></div>
-        <BarRows rows={bars} max={Math.max(...bars.map((b) => b.value))} gap="gap-[7px]" labelW={76} />
-        <p className="flex items-center gap-2 t-b3 text-ink-2 mt-5">
+        <BarRows rows={bars} max={Math.max(...bars.map((b) => b.value))} gap="gap-[5px]" labelW={76} dense />
+        <p className="flex items-center gap-2 t-b3 text-ink-2 mt-3">
           <span className="size-2 rounded-full bg-brand-500" />DOST — home agency • Others: {rest.map(([k, n]) => `${k} ${n}`).join(", ")}
         </p>
       </div>
@@ -158,8 +158,8 @@ function HealthCard({ onOpen }: { onOpen: () => void }) {
             </button>
           ))}
           <motion.button onClick={onOpen}
-            className="mt-3 w-full text-left rounded-lg bg-bad-soft/45 px-3 py-2.5 t-l1 text-bad-text leading-[1.45] cursor-pointer">
-            {Math.round(((counts.Poor ?? 0) / total) * 100) >= 50 ? "Half the portfolio is" : `${Math.round(((counts.Poor ?? 0) / total) * 100)}% of the portfolio is`} in poor condition — {counts.Poor ?? 0} assets flagged as critical needs.
+            className="mt-3 w-full text-left rounded-lg bg-bad-soft/45 px-3 py-2.5 t-b3 text-bad-text cursor-pointer">
+            {Math.round(((counts.Poor ?? 0) / total) * 100) >= 50 ? "Half the portfolio is" : `${Math.round(((counts.Poor ?? 0) / total) * 100)}% of the portfolio is`} in poor condition — {counts.Poor ?? 0} assets flagged as Critical Needs.
           </motion.button>
         </div>
       </div>

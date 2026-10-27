@@ -9,8 +9,8 @@ import { EASE, T } from "@/components/ui/motion";
 /* ── Horizontal bar rows (Agency Inventory Split) ─────────────── */
 export interface BarRow { key: string; label: string; value: number; sub?: string; muted?: boolean; onClick?: () => void }
 
-export function BarRows({ rows, max, gap = "gap-[13px]", height = 10, showPct, total, labelW = 92 }: {
-  rows: BarRow[]; max: number; gap?: string; height?: number; showPct?: boolean; total?: number; labelW?: number;
+export function BarRows({ rows, max, gap = "gap-[13px]", height = 10, showPct, total, labelW = 92, dense }: {
+  rows: BarRow[]; max: number; gap?: string; height?: number; showPct?: boolean; total?: number; labelW?: number; dense?: boolean;
 }) {
   const [hover, setHover] = useState<string | null>(null);
   return (
@@ -20,13 +20,13 @@ export function BarRows({ rows, max, gap = "gap-[13px]", height = 10, showPct, t
           className={cn("group grid items-center gap-x-4 rounded-md -mx-2 px-2 py-0.5 transition-[background-color,opacity] duration-[120ms]",
             r.onClick && "cursor-pointer", hover && hover !== r.key ? "opacity-55" : "opacity-100", hover === r.key && "bg-tint")}
           style={{ gridTemplateColumns: showPct ? `${labelW}px 1fr 36px 44px` : `${labelW}px 1fr 36px` }}>
-          <span className={cn("t-b1 truncate", r.muted ? "text-ink-2" : "text-ink")}>{r.label}</span>
+          <span className={cn(dense ? "t-b2" : "t-b1", "truncate", r.muted ? "text-ink-2" : "text-ink")}>{r.label}</span>
           <span className="relative rounded-full bg-brand-100 overflow-hidden" style={{ height }}>
             <motion.span className="absolute inset-y-0 left-0 rounded-full bg-brand-500"
               initial={{ width: 0 }} animate={{ width: `${(r.value / max) * 100}%` }}
               transition={{ duration: 0.8, ease: EASE, delay: 0.15 + i * 0.05 }} />
           </span>
-          <span className="t-b1 text-right tnum"><CountUp value={r.value} /></span>
+          <span className={cn(dense ? "t-b2" : "t-b1", "text-right tnum")}><CountUp value={r.value} /></span>
           {showPct && total ? <span className="t-b2 text-ink-2 text-right tnum">{Math.round((r.value / total) * 100)}%</span> : null}
         </div>
       ))}

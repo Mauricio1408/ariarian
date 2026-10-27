@@ -133,7 +133,7 @@ export function FilterMenu({ groups, value, onChange }: { groups: FilterGroup[];
 }
 
 /** Figma "Overlay - Export" (1601:5761): a dark menu — Excel, CSV, PDF. */
-export function ExportButton({ onPick }: { onPick: (f: ExportFormat) => void }) {
+export function ExportButton({ onPick, record, label = "Export" }: { onPick: (f: ExportFormat) => void; record?: boolean; label?: string }) {
   const [open, setOpen] = useState(false);
   // File-type marks exported from the Figma Export Option component (1344:3835)
   const items: { f: ExportFormat; label: string; icon: string }[] = [
@@ -143,7 +143,9 @@ export function ExportButton({ onPick }: { onPick: (f: ExportFormat) => void }) 
   ];
   return (
     <div className="relative">
-      <Button variant="dark" iconRight={ArrowDown} onClick={() => setOpen((o) => !o)}>Export</Button>
+      {record
+        ? <Button variant="record" size="rec" onClick={() => setOpen((o) => !o)}>{label}</Button>
+        : <Button variant="dark" iconRight={ArrowDown} onClick={() => setOpen((o) => !o)}>{label}</Button>}
       <Popover open={open} onClose={() => setOpen(false)} className="min-w-0 w-[110px] p-1 rounded-[6px] bg-[#0b0b0b] border-[#0b0b0b]">
         {items.map(({ f, label, icon }) => (
           <button key={f} onClick={() => { setOpen(false); onPick(f); }}

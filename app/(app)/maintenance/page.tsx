@@ -3,29 +3,31 @@
 import { Suspense, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronDown, Maximize2, Pencil, Plus, Send, Trash2, Wrench } from "lucide-react";
+import { ChevronDown, Pencil, Plus, Trash2, Wrench } from "lucide-react";
 import { useLookups, useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { PRIORITY, PROBLEM_TYPE } from "@/lib/types";
-import type { WorkOrder } from "@/lib/types";
+import type { Priority, ProblemType, WorkOrder } from "@/lib/types";
 import { OFFICES } from "@/lib/seed";
 import { daysOpen, isOverdue, openOrders } from "@/lib/selectors";
-import { deadline, DATE_TIER_CLASS, php, phpExact } from "@/lib/format";
+import { deadline, DATE_TIER_CLASS, php } from "@/lib/format";
 import { useExport } from "@/lib/use-export";
-import { Page, PageTitle } from "@/components/shell/topbar";
-import { Button, Checkbox, CountUp, IconButton, Thumb } from "@/components/ui/primitives";
+import type { ExportFormat } from "@/lib/export";
+import { Page } from "@/components/shell/topbar";
+import { Button, CountUp, IconButton, Thumb } from "@/components/ui/primitives";
 import { MenuItem, Popover } from "@/components/ui/overlay";
-import { ResizableHeader, TableScroll, useColumns } from "@/components/ui/columns";
-import { FIELD_ICON as F } from "@/lib/field-icons";
-import { ExportButton, FilterChips, FilterMenu, Pager, SearchBox, SortMenu, Th, rowMotion, type FilterValue } from "@/components/ui/table";
-import { BulkBar } from "@/components/ui/bulk-bar";
+import { ExportButton, FilterChips, SearchBox, rowMotion, type FilterValue } from "@/components/ui/table";
+import { ChoiceButton, RecordCard, RecordHeading, RecordPagination, RecordSearch } from "@/components/ui/record-kit";
 import { T } from "@/components/ui/motion";
+import { OP_TONE, StatusPill } from "@/components/assets/record";
 import { ProblemChip } from "@/components/maintenance/problem-chip";
 import { ResolveModal } from "@/components/maintenance/resolve-modal";
 import { WorkOrderModal } from "@/components/maintenance/work-order-modal";
 import { Board } from "@/components/maintenance/board";
 
 const PER = 10;
+// Problem · Technician · Stage · Promised · Action — the record-table widths of the new list look.
+const COLS = [170, 170, 120, 130, 140] as const;
 
 export default function MaintenancePage() {
   return <Page crumb="Maintenance" icon={Wrench}><Suspense><Maintenance /></Suspense></Page>;
@@ -55,10 +57,7 @@ function Maintenance() {
   const resolveId = params.get("resolve");
   const [q, setQ] = useState("");
   const [filters, setFilters] = useState<FilterValue>({});
-  const [sort, setSort] = useState<{ key: "promised" | "priority" | "asset"; dir: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(1);
-  const cols = useColumns("maintenance", [{ w: 44, fixed: true }, { w: 210, min: 160 }, { w: 182, min: 170 }, { w: 170 }, { w: 130 }, { w: "fr" }, { w: 160, min: 150 }]);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [woModal, setWoModal] = useState<{ editing: WorkOrder | null } | null>(null);
   const [menu, setMenu] = useState<string | null>(null);
 
@@ -80,17 +79,11 @@ function Maintenance() {
 
   const open = openOrders(state);
   const rows = useMemo(() => {
-    let r = open.filter(match);
-    if (sort) {
-      const d = sort.dir === "asc" ? 1 : -1;
-      const key = (w: WorkOrder) => sort.key === "promised" ? w.promisedOn ?? "" : sort.key === "priority" ? PRIORITY.indexOf(w.priority) : L.asset.get(w.assetId)?.name ?? "";
-      r = [...r].sort((a, b) => (key(a) > key(b) ? d : key(a) < key(b) ? -d : 0));
-    } else {
-      r = [...r].sort((a, b) => (a.promisedOn ?? "").localeCompare(b.promisedOn ?? ""));
-    }
+    // Most urgent first: overdue, then by promised date.
+    const r = [...open.filter(match)].sort((a, b) => (a.promisedOn ?? "").localeCompare(b.promisedOn ?? ""));
     return r;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.workOrders, L, q, filters, sort]);
+  }, [state.workOrders, L, q, filters]);
 
   const pages = Math.max(1, Math.ceil(rows.length / PER));
   const p = Math.min(page, pages);
@@ -107,42 +100,51 @@ function Maintenance() {
     toast({ title: "Work order cancelled", body: `${L.asset.get(w.assetId)?.name} • ${w.summary}`, action: { label: "Undo", run: () => dispatch({ type: "restoreWorkOrder", wo: w }) } });
   };
 
-  const toolbarRight = (
-    <div className="ml-auto flex items-center gap-[18px]">
-      <SortMenu value={sort} onChange={setSort} options={[{ key: "promised", label: "Promised date" }, { key: "priority", label: "Priority" }, { key: "asset", label: "Asset" }]} />
-      <FilterMenu value={filters} onChange={(v) => { setFilters(v); setPage(1); }} groups={[
-        { key: "problem", label: "Problem", options: [...PROBLEM_TYPE] }, { key: "priority", label: "Priority", options: [...PRIORITY] },
-        { key: "technician", label: "Technician", options: technicians }, { key: "office", label: "Office", options: [...OFFICES] },
-      ]} />
-      <Button variant="primary" iconRight={Plus} onClick={() => setWoModal({ editing: null })}>New Work Order</Button>
-      <ExportButton onPick={(fmt) => doExport("maintenance-queue.csv", ["Work order", "Asset", "Problem", "Summary", "Technician", "Stage", "Promised"], rows.map((w) => [w.id, L.asset.get(w.assetId)?.name ?? "", w.problem, w.summary, w.technician, w.stage, w.promisedOn ?? ""]), fmt)} />
-    </div>
+  const exportQueue = (fmt: ExportFormat) => doExport("maintenance-queue", ["Work order", "Asset", "Problem", "Summary", "Technician", "Stage", "Promised"], rows.map((w) => [w.id, L.asset.get(w.assetId)?.name ?? "", w.problem, w.summary, w.technician, w.stage, w.promisedOn ?? ""]), fmt);
+
+  // KPI strip shared by both views (Figma 4773:7115).
+  const kpis = (
+    <section className="card-raised grid grid-cols-5 divide-x divide-line">
+      {[
+        { l: "Needs Triage", v: <CountUp value={reported.length} />, s: <span className="text-bad-text">▲ {reported.filter((w) => w.reportedOn > "2026-03-07").length} this week</span> },
+        { l: "In Repair", v: <CountUp value={inRepair.length} />, s: <span className="text-ink-2">avg. {avgOpen.toFixed(1)} days open</span> },
+        { l: "Resolved this month", v: <CountUp value={resolvedMar.length} />, s: <span className="text-good-text">▲ {Math.max(0, resolvedMar.length - 5)} vs Feb</span> },
+        { l: "Repair Spend YTD", v: <CountUp value={ytd} format={php} />, s: <span className="text-ink-2">of ₱1.2M budget • {Math.round((ytd / 1_200_000) * 100)}%</span> },
+        { l: "Overdue", v: <CountUp value={open.filter(isOverdue).length} />, s: <span className="text-bad-text">past promised date</span> },
+      ].map((k, i) => (
+        <motion.div key={k.l} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ ...T.page, delay: 0.05 + i * 0.04 }} className="px-4 py-6">
+          <p className="t-b3 text-ink-2">{k.l}</p><p className="text-[28px] font-semibold tracking-[-0.01em] leading-tight mt-1">{k.v}</p><p className="t-b3 mt-0.5">{k.s}</p>
+        </motion.div>
+      ))}
+    </section>
   );
+
 
   return (
     <>
       <AnimatePresence mode="wait" initial={false}>
         {mode === "list" ? (
           <motion.div key="list" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={T.page}>
-            <PageTitle title="Maintenance Queue" sub="Last Updated: March 14, 2026" right={<Toggle mode={mode} onChange={(m) => setParam("mode", m === "board" ? "board" : null)} />} />
-            <section className="card-raised px-4 pt-5 pb-2">
-              <div className="flex items-center gap-4">
-                <SearchBox value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search by asset, technician, or work order" className="w-[440px]" />
-                <Pager page={p} pages={pages} onPage={setPage} />
-                {toolbarRight}
+            <RecordHeading title="Maintenance Queue" sub="March 14, 2026 · Review issues and monitor ongoing work"
+              right={<><Toggle mode={mode} onChange={(m) => setParam("mode", m === "board" ? "board" : null)} /><Button variant="primary" size="rec" onClick={() => setWoModal({ editing: null })}>New work order</Button></>} />
+            <div className="mt-6">{kpis}</div>
+            <div className="flex items-center gap-3 mt-6">
+              <RecordSearch value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search by asset, technician, or work order" className="flex-1" />
+              <ChoiceButton label="Problem" value={(filters.problem?.[0] as ProblemType) ?? null} options={PROBLEM_TYPE} onPick={(v) => { setFilters((f) => ({ ...f, problem: v ? [v] : [] })); setPage(1); }} />
+              <ChoiceButton label="Priority" value={(filters.priority?.[0] as Priority) ?? null} options={PRIORITY} onPick={(v) => { setFilters((f) => ({ ...f, priority: v ? [v] : [] })); setPage(1); }} align="right" />
+              <ExportButton record onPick={exportQueue} />
+            </div>
+            <RecordCard className="mt-6">
+              <div className="flex items-center h-[42px] px-4 bg-head text-[12px] leading-[1.4] text-ink-2">
+                <span className="flex-1 min-w-0">Asset</span>
+                <span style={{ width: COLS[0] }}>Problem</span><span style={{ width: COLS[1] }}>Technician</span>
+                <span style={{ width: COLS[2] }}>Stage</span><span style={{ width: COLS[3] }}>Promised</span><span style={{ width: COLS[4] }}>Action</span>
               </div>
-              <FilterChips value={filters} onChange={setFilters} />
-              <TableScroll>
-              <ResizableHeader cols={cols} className="h-[42px] mt-2 dash-b px-3">
-                <Checkbox checked={shown.length > 0 && shown.every((w) => selected.has(w.id))} label="Select page"
-                  onChange={(v) => setSelected((s) => { const n = new Set(s); shown.forEach((w) => (v ? n.add(w.id) : n.delete(w.id))); return n; })} />
-                <Th icon={F.name}>Asset</Th><Th icon={F.problem}>Problem</Th><Th icon={F.technician}>Technician</Th><Th icon={F.status}>Stage</Th><Th icon={F.deadline}>Promised</Th><Th icon={F.status} className="justify-end pr-3">Actions</Th>
-              </ResizableHeader>
               <div className="min-h-[200px]">
                 <AnimatePresence mode="popLayout" initial={false}>
                   {shown.length === 0 && (
                     <motion.div key="none" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="py-16 text-center">
-                      <p className="text-[18px] font-semibold">{open.length ? "No work orders match" : "Queue is clear"}</p>
+                      <p className="text-[18px] font-semibold text-deep">{open.length ? "No work orders match" : "Queue is clear"}</p>
                       <p className="t-b2 text-ink-2 mt-1">{open.length ? "Try a different search or filter." : "Every reported issue has been resolved."}</p>
                     </motion.div>
                   )}
@@ -150,36 +152,38 @@ function Maintenance() {
                     const a = L.asset.get(w.assetId);
                     if (!a) return null;
                     const d = deadline(w.promisedOn);
-                    const sel = selected.has(w.id);
                     return (
-                      <motion.div key={w.id} {...rowMotion(i)} onClick={() => setParam("resolve", w.id)} style={cols.style}
-                        className={cn("group grid items-center h-12 border-b border-line px-3 cursor-pointer transition-colors duration-[120ms]", sel ? "bg-brand-50" : "hover:bg-tint")}>
-                        <Checkbox checked={sel} label={`Select ${a.name}`} onChange={() => setSelected((s) => { const n = new Set(s); if (n.has(w.id)) n.delete(w.id); else n.add(w.id); return n; })} />
-                        <span className="flex items-center gap-3 min-w-0 pr-2"><Thumb src={a.photo} category={a.category} size={28} /><span className="text-[15px] font-medium truncate">{a.name}</span></span>
-                        <span><ProblemChip p={w.problem} /></span>
-                        <span className="t-b1 truncate pr-2">{w.technician.replace(" · in-house", "")}</span>
-                        <span className={cn("t-b1", w.stage === "in_repair" ? "text-good-text" : "text-ink")}>{w.stage === "in_repair" ? "In repair" : "Reported"}</span>
-                        <span className={cn("t-b1", DATE_TIER_CLASS[d.tier])}>{d.label}</span>
-                        <span className="relative flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                          <IconButton icon={Maximize2} label="Resolve issue" onClick={() => setParam("resolve", w.id)} className="text-ink" />
-                          <IconButton icon={Send} label="Nudge technician" onClick={() => toast({ title: `Reminder sent to ${w.technician}`, body: `${a.name} • ${d.label}` })} className="text-brand-500 hover:bg-brand-50" />
-                          <IconButton icon={Pencil} label="Edit work order" onClick={() => setWoModal({ editing: w })} className="text-good-text hover:bg-good-soft/40" />
-                          <IconButton icon={Trash2} label="Cancel work order" onClick={() => cancel(w)} className="text-bad-text hover:bg-bad-soft/40" />
+                      <motion.div key={w.id} {...rowMotion(i)} onClick={() => setParam("resolve", w.id)}
+                        className="group flex items-center h-[60px] px-4 border-b border-rule bg-white cursor-pointer transition-colors duration-[120ms] hover:bg-tint">
+                        <span className="flex-1 min-w-0 flex items-center gap-2.5 pr-3">
+                          <Thumb src={a.photo} category={a.category} size={36} className="rounded-[8px]" />
+                          <span className="min-w-0 flex flex-col gap-0.5 leading-[1.4]">
+                            <span className="text-[14px] font-medium text-deep truncate">{a.name}</span>
+                            <span className="text-[12px] text-ink-2 truncate">{a.serial} · {w.summary}</span>
+                          </span>
+                        </span>
+                        <span style={{ width: COLS[0] }}><ProblemChip p={w.problem} className="h-6 w-auto px-2.5 rounded-full text-[13px] font-medium" /></span>
+                        <span style={{ width: COLS[1] }} className="text-[14px] text-n-600 truncate pr-3">{w.technician.replace(" · in-house", "")}</span>
+                        <span style={{ width: COLS[2] }}><StatusPill size="sm" tone={w.stage === "in_repair" ? OP_TONE.Maintenance : OP_TONE.Standby}>{w.stage === "in_repair" ? "In repair" : "Reported"}</StatusPill></span>
+                        <span style={{ width: COLS[3] }} className={cn("text-[14px]", DATE_TIER_CLASS[d.tier])}>{d.label}</span>
+                        <span style={{ width: COLS[4] }} className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                          <button type="button" onClick={() => setParam("resolve", w.id)} className="text-[14px] font-medium text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 cursor-pointer whitespace-nowrap">Resolve →</button>
+                          <span className="ml-auto flex opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                            <IconButton icon={Pencil} label="Edit work order" onClick={() => setWoModal({ editing: w })} className="size-7 text-good-text hover:bg-good-soft/40" />
+                            <IconButton icon={Trash2} label="Cancel work order" onClick={() => cancel(w)} className="size-7 text-bad-text hover:bg-bad-soft/40" />
+                          </span>
                         </span>
                       </motion.div>
                     );
                   })}
                 </AnimatePresence>
               </div>
-              </TableScroll>
-              <button onClick={() => setWoModal({ editing: null })} aria-label="New work order" className="group flex items-center h-12 w-full px-3 border-b border-line hover:bg-tint cursor-pointer transition-colors">
-                <Plus size={18} /><span className="ml-3 t-b2 text-ink-2 opacity-0 group-hover:opacity-100 transition-opacity">New work order</span>
-              </button>
-              <div className="flex items-center h-12 px-4 border-b border-line">
-                <span className="text-[16px] font-semibold tnum">Showing {shown.length} of {rows.length} open</span>
-                <span className="ml-auto text-[16px] tnum">Repair spend YTD: <b className="font-semibold">{phpExact(ytd)}</b></span>
-              </div>
-            </section>
+              <RecordPagination page={p} pages={pages} from={(p - 1) * PER + 1} to={(p - 1) * PER + shown.length} total={rows.length} noun="open work orders" per={PER} onPage={setPage} />
+            </RecordCard>
+            <div className="flex items-start justify-between leading-[1.4] mt-3">
+              <p className="text-[12px] text-ink-2">Repair spend year to date · closed work orders</p>
+              <p className="text-[14px] font-medium text-deep tnum">{php(ytd)}</p>
+            </div>
           </motion.div>
         ) : (
           <motion.div key="board" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={T.page}>
@@ -187,19 +191,7 @@ function Maintenance() {
               <div><h1 className="t-h1">Maintenance</h1><p className="t-b2 text-ink-2 mt-0.5">Work orders across {state.assets.length} assets. Drag a card to change its stage.</p></div>
               <Button variant="primary" size="lg" iconRight={Plus} className="ml-auto mt-1" onClick={() => setWoModal({ editing: null })}>New Work Order</Button>
             </div>
-            <section className="card-raised grid grid-cols-5 divide-x divide-line">
-              {[
-                { l: "Needs Triage", v: <CountUp value={reported.length} />, s: <span className="text-bad-text">▲ {reported.filter((w) => w.reportedOn > "2026-03-07").length} this week</span> },
-                { l: "In Repair", v: <CountUp value={inRepair.length} />, s: <span className="text-ink-2">avg. {avgOpen.toFixed(1)} days open</span> },
-                { l: "Resolved this month", v: <CountUp value={resolvedMar.length} />, s: <span className="text-good-text">▲ {Math.max(0, resolvedMar.length - 5)} vs Feb</span> },
-                { l: "Repair Spend YTD", v: <CountUp value={ytd} format={php} />, s: <span className="text-ink-2">of ₱1.2M budget • {Math.round((ytd / 1_200_000) * 100)}%</span> },
-                { l: "Overdue", v: <CountUp value={open.filter(isOverdue).length} />, s: <span className="text-bad-text">past promised date</span> },
-              ].map((k, i) => (
-                <motion.div key={k.l} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ ...T.page, delay: 0.05 + i * 0.04 }} className="px-4 py-6">
-                  <p className="t-b3 text-ink-2">{k.l}</p><p className="text-[28px] font-semibold tracking-[-0.01em] leading-tight mt-1">{k.v}</p><p className="t-b3 mt-0.5">{k.s}</p>
-                </motion.div>
-              ))}
-            </section>
+            {kpis}
             <div className="flex items-center gap-3 mt-5">
               <SearchBox value={q} onChange={setQ} placeholder="Search work orders, assets, or technicians" className="w-[440px]" />
               <div className="ml-auto flex items-center gap-3">
@@ -221,11 +213,6 @@ function Maintenance() {
         )}
       </AnimatePresence>
 
-      <BulkBar count={selected.size} onClear={() => setSelected(new Set())} actions={[
-        { label: "Move to In repair", run: () => { [...selected].forEach((id) => dispatch({ type: "stage", woId: id, stage: "in_repair" })); toast({ title: `${selected.size} moved to In repair`, tone: "good" }); setSelected(new Set()); } },
-        { label: "Nudge technicians", run: () => { toast({ title: `${selected.size} reminders sent` }); setSelected(new Set()); } },
-        { label: "Cancel", danger: true, run: () => { const ws = state.workOrders.filter((w) => selected.has(w.id)); ws.forEach((w) => dispatch({ type: "removeWorkOrder", woId: w.id })); setSelected(new Set()); toast({ title: `${ws.length} work orders cancelled`, action: { label: "Undo", run: () => ws.forEach((w) => dispatch({ type: "restoreWorkOrder", wo: w })) } }); } },
-      ]} />
       <ResolveModal woId={resolveId} onClose={() => setParam("resolve", null)} />
       <WorkOrderModal open={!!woModal} editing={woModal?.editing ?? null} onClose={() => setWoModal(null)} />
     </>

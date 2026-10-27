@@ -129,11 +129,11 @@ type Draft = Omit<Asset, "acquiredOn" | "warrantyStart" | "warrantyEnd" | "room"
   Partial<Pick<Asset, "acquiredOn" | "warrantyEnd" | "room" | "address" | "agency" | "office" | "tag">>;
 
 const NAMED_ASSETS: Draft[] = [
-  { id: "DOST-2023-0117", serial: "SN-APL-0117", name: "MacBook Pro 16\"", spec: "MacBook Pro 16\" M1 — 16GB / 512GB", category: "Hardware", custodianId: E.juan, cost: 164995, acquiredOn: "2023-11-30", operational: "In Use", condition: "Excellent", photo: "/img/assets/macbook-pro.jpg", agency: "SEI", office: "Central Office", warrantyEnd: "2026-11-30" },
+  { id: "DOST-2023-0117", serial: "SN-APL-0117", name: "MacBook Pro 16-inch", spec: "MacBook Pro 16-inch M1 — 16GB / 512GB", category: "Hardware", custodianId: E.juan, cost: 164995, acquiredOn: "2023-11-30", operational: "In Use", condition: "Excellent", photo: "/img/assets/macbook-pro.jpg", agency: "SEI", office: "Central Office", warrantyEnd: "2026-11-30" },
   { id: "DOST-2024-0342", serial: "SN-DEL-0342", name: "Dell OptiPlex 7010", spec: "Dell OptiPlex 7010 desktop", category: "Hardware", custodianId: E.juan, cost: 48500, acquiredOn: "2024-03-12", operational: "Maintenance", condition: "Poor", photo: "/img/assets/dell-optiplex.jpg", agency: "DOST", office: "Central Office", warrantyEnd: "2027-03-12" },
   { id: "DOST-2025-0225", serial: "SN-LEN-0225", name: "Lenovo ThinkPad T14", spec: "Lenovo ThinkPad T14 Gen 3", category: "Hardware", custodianId: E.juan, cost: 78400, acquiredOn: "2025-03-10", operational: "In Use", condition: "Excellent", photo: "/img/assets/lenovo-thinkpad.jpg", agency: "SEI", office: "Central Office", warrantyEnd: "2028-03-10" },
   { id: "DOST-2021-0814", serial: "TYT-HLX-0814", name: "Toyota Hilux 2.4G", spec: "Toyota Hilux 2.4G 4x2 MT", category: "Vehicles", custodianId: E.grace, cost: 2120000, acquiredOn: "2021-08-14", operational: "Maintenance", condition: "Poor", photo: "/img/assets/toyota-hilux.jpg", agency: "DA", office: "Logistics Center", room: "Motor Pool", warrantyEnd: "2026-08-14", tag: "DOST-VEH-002" },
-  { id: "DOST-2024-0088", serial: "OFC-2630-04", name: "Canon iR 2630", spec: "Canon imageRUNNER 2630 copier", category: "Office", custodianId: E.juan, cost: 132750, acquiredOn: "2024-08-14", operational: "Maintenance", condition: "Poor", photo: "/img/assets/canon-ir.jpg", agency: "SEI", office: "Central Office", warrantyEnd: "2027-08-14" },
+  { id: "DOST-2024-0088", serial: "OFC-2630-04", name: "Canon iR2630", spec: "Canon imageRUNNER 2630 copier", category: "Office", custodianId: E.juan, cost: 132750, acquiredOn: "2024-08-14", operational: "Maintenance", condition: "Poor", photo: "/img/assets/canon-ir.jpg", agency: "SEI", office: "Central Office", warrantyEnd: "2027-08-14" },
   { id: "DOST-2026-0817", serial: "VEH-0817", name: "Ford Transit Van", spec: "Ford Transit Van 2.2 TDCi", category: "Vehicles", custodianId: E.grace, cost: 1950000, acquiredOn: "2026-01-08", operational: "In Use", condition: "Fair", photo: "/img/assets/ford-transit.jpg", agency: "SEI", office: "Logistics Center", room: "Warehouse A", address: "Brgy. Sto. Tomas, Biñan, Laguna", warrantyEnd: "2029-01-08", tag: "DOST-VEH-001" },
   { id: "DOST-2022-1014", serial: "APP-MIT-1014", name: "Mitsubishi Aircon", spec: "Mitsubishi Heavy 2.0HP inverter split", category: "Appliances", custodianId: E.liza, cost: 45500, acquiredOn: "2022-02-24", operational: "Maintenance", condition: "Poor", photo: "/img/assets/mitsubishi-aircon.jpg", agency: "DOH", office: "Central Office", warrantyEnd: "2025-02-24" },
   { id: "DOST-2024-0290", serial: "SN-DEL-0290", name: "Dell Latitude 5420", spec: "Dell Latitude 5420 14\" laptop", category: "Hardware", custodianId: E.ana, cost: 52700, acquiredOn: "2024-09-05", operational: "Standby", condition: "Fair", photo: "/img/assets/dell-latitude.jpg", agency: "DepEd", office: "Regional Office XI", warrantyEnd: "2027-09-05" },
@@ -314,14 +314,14 @@ export function monthsBetween(a: string, b: string) {
 type WOSeed = [assetName: string, problem: ProblemType, summary: string, priority: Priority, tech: string, stage: WorkOrder["stage"], reportedOn: string, by: string, promised: string | null, closed?: string, cost?: number];
 
 const WO_SEEDS: WOSeed[] = [
-  ["Canon iR 2630", "Physical Damage", "Recurring paper jam", "Medium", "Dataworld", "reported", "2026-02-14", "juan", "2026-02-21"],
+  ["Canon iR2630", "Physical Damage", "Recurring paper jam", "Medium", "Dataworld", "reported", "2026-02-14", "juan", "2026-02-21"],
   ["Toyota Hilux 2.4G", "Hardware Failure", "Brake squeal, 10k service due", "High", "R. Cruz", "reported", "2026-02-20", "ramon", "2026-02-28"],
   ["Mitsubishi Aircon", "Hardware Failure", "Compressor replacement", "High", "FixIT Manila", "in_repair", "2026-02-26", "liza", "2026-03-07"],
   ["Dell OptiPlex 7010", "Software Issue", "Random shutdowns under load", "High", "C. Rivera", "reported", "2026-03-06", "maria", "2026-03-20"],
   ["Acer Aspire 5", "Battery Issue", "Screen cracked, battery swelling", "High", "MicroCircuit", "reported", "2026-03-12", "ramon", "2026-03-23"],
   ["Kyocera M2040dn", "Physical Damage", "Paper tray hinge snapped", "Medium", "Dataworld", "in_repair", "2026-03-01", "rosa", "2026-03-26"],
   ["Dell Latitude 5420", "Software Issue", "Reimage after malware flag", "Medium", "C. Rivera", "reported", "2026-03-10", "ana", "2026-03-29"],
-  ["MacBook Pro 16\"", "Battery Issue", "Battery service recommended", "Low", "MicroCircuit", "in_repair", "2026-03-05", "juan", "2026-04-02"],
+  ["MacBook Pro 16-inch", "Battery Issue", "Battery service recommended", "Low", "MicroCircuit", "in_repair", "2026-03-05", "juan", "2026-04-02"],
   ["Lenovo ThinkPad T14", "Hardware Failure", "Loose hinge, display flicker", "Low", "R. Cruz", "reported", "2026-03-11", "juan", "2026-04-06"],
   ["Ford Transit Van", "Physical Damage", "Rear bumper dent", "Medium", "FixIT Manila", "in_repair", "2026-03-03", "grace", "2026-04-10"],
   ["Epson Projector EB-X51", "Hardware Failure", "Lamp replacement", "Medium", "A. Cruz · in-house", "in_repair", "2026-03-04", "juan", "2026-03-18"],
@@ -330,7 +330,7 @@ const WO_SEEDS: WOSeed[] = [
   ["Ford Transit Van", "Others", "Preventive service · 20,000 km", "Low", "Motor pool", "resolved", "2026-03-08", "grace", "2026-03-10", "2026-03-10", 8450],
   ["Lenovo ThinkPad T14", "Hardware Failure", "Keyboard replaced", "Medium", "A. Cruz · in-house", "resolved", "2026-03-03", "juan", "2026-03-07", "2026-03-07", 4200],
   ["Dell Latitude 5420", "Battery Issue", "Battery replaced, moved to Standby", "Medium", "R. Santos · in-house", "resolved", "2026-02-27", "ana", "2026-03-04", "2026-03-04", 5100],
-  ["MacBook Pro 16\"", "Hardware Failure", "SSD swap under warranty", "High", "Apple authorised service", "resolved", "2026-02-20", "juan", "2026-03-02", "2026-03-02", 0],
+  ["MacBook Pro 16-inch", "Hardware Failure", "SSD swap under warranty", "High", "Apple authorised service", "resolved", "2026-02-20", "juan", "2026-03-02", "2026-03-02", 0],
 ];
 const TECHS = ["Dataworld", "R. Cruz", "FixIT Manila", "C. Rivera", "MicroCircuit", "A. Cruz · in-house", "R. Santos · in-house"];
 const SUMMARIES: Record<ProblemType, string[]> = {
@@ -349,7 +349,7 @@ function genWorkOrders(assets: Asset[]): WorkOrder[] {
     const [name, problem, summary, priority, technician, stage, reportedOn, by, promisedOn, closedOn, cost] = s;
     out.push({ id: `WO-${++n}`, assetId: byName.get(name)!.id, problem, summary, priority, technician, stage, reportedOn, reportedBy: E[by], promisedOn, closedOn: closedOn ?? null, cost: cost ?? null });
   }
-  // The Figma save-conflict path: Canon iR 2630 moved to Rosa Lim while the dialog was open.
+  // The Figma save-conflict path: Canon iR2630 moved to Rosa Lim while the dialog was open.
   out[0].conflict = { by: "Liza Reyes", to: "Rosa Lim", minutesAgo: 4 };
 
   // 10 more open: 6 reported + 4 in repair, on generated Maintenance-status assets.
@@ -387,26 +387,27 @@ function genWorkOrders(assets: Asset[]): WorkOrder[] {
   return out;
 }
 
-/* ── Audit log ────────────────────────────────────────────────── */
+/* ── Audit log — the ten registrations shown on Figma 4773:8059, then older lifecycle events ── */
 function genAudit(assets: Asset[], employees: Employee[]): AuditEntry[] {
   const byName = new Map(assets.map((a) => [a.name, a]));
   const visible: [string, string, string, AuditEntry["action"]][] = [
-    ["MacBook Pro 16\"", "juan", "2026-03-11", "Audited"],
-    ["Toyota Hilux 2.4G", "maria", "2026-03-04", "Transferred"],
-    ["Mitsubishi Aircon", "ramon", "2026-02-24", "Reported"],
+    ["MacBook Pro 16-inch", "juan", "2026-03-11", "Registered"],
+    ["Toyota Hilux 2.4G", "maria", "2026-03-04", "Registered"],
+    ["Mitsubishi Aircon", "ramon", "2026-02-24", "Registered"],
     ["Ford Transit Van", "grace", "2026-01-08", "Registered"],
     ["Medicine", "liza", "2025-12-16", "Registered"],
     ["Kyocera M2040dn", "rosa", "2025-11-20", "Registered"],
-    ["Canon iR 2630", "juan", "2025-10-02", "Updated"],
+    ["Canon iR2630", "juan", "2025-10-02", "Registered"],
     ["Lenovo ThinkPad T14", "carlos", "2025-03-10", "Registered"],
     ["Dell Latitude 5420", "ana", "2024-09-05", "Registered"],
-    ["Dell OptiPlex 7010", "juan", "2024-08-09", "Updated"],
+    ["Dell OptiPlex 7010", "juan", "2024-08-09", "Registered"],
   ];
   const out: AuditEntry[] = visible.map(([name, who, date, action], i) => ({
     id: `AU-${pad(900 - i)}`, assetId: byName.get(name)!.id, action, byId: E[who], date,
   }));
   const rest = shuffle(assets.filter((a) => !visible.some(([n]) => n === a.name))).slice(0, 38);
-  const actions: AuditEntry["action"][] = ["Registered", "Transferred", "Updated", "Audited", "Reported"];
+  // The Audit Log page shows registrations only (Figma 4773:8059); these older events feed the employee history.
+  const actions: AuditEntry["action"][] = ["Audited", "Transferred", "Updated", "Audited", "Reported"];
   rest.forEach((a, i) => {
     const y = 2024 - Math.floor(i / 16);
     out.push({ id: `AU-${pad(880 - i)}`, assetId: a.id, action: pick(actions), byId: pick(employees).id, date: iso(y, 12 - (i % 12), 1 + Math.floor(rnd() * 27)) });
@@ -422,13 +423,13 @@ const NOTIFICATIONS: AppNotification[] = [
   { id: "N-09", kind: "maintenance", title: "Repair update", body: "HP LaserJet Pro M404 — fuser unit ordered, back in service by Mar 24", date: "2026-03-13", time: "4:05 PM", read: false },
   { id: "N-08", kind: "people", title: "Clearance started", body: "Paolo Mendoza must return 2 assets before Mar 27", date: "2026-03-13", time: "11:20 AM", read: false, action: { label: "View clearance", href: "/employees?tab=Clearance" } },
   { id: "N-07", kind: "audit", title: "Audit due this quarter", body: "3 Excellent-condition assets are due for physical audit", date: "2026-03-13", time: "9:00 AM", read: false },
-  { id: "N-06", kind: "maintenance", title: "Queued for triage", body: "Canon iR 2630 — paper jam recurring, reported by Juan Dela Cruz", date: "2026-03-09", time: "Mar 9", read: false },
+  { id: "N-06", kind: "maintenance", title: "Queued for triage", body: "Canon iR2630 — paper jam recurring, reported by Juan Dela Cruz", date: "2026-03-09", time: "Mar 9", read: false },
   { id: "N-05", kind: "people", title: "Employee added", body: "Miguel Bautista joined DOST Regional Office VI as Science Research Analyst", date: "2026-03-08", time: "Mar 8", read: false },
   { id: "N-04", kind: "transfer", title: "Transfer requested", body: "Dell Latitude 5420 to Regional Office XI • awaiting your approval", date: "2026-03-07", time: "Mar 7", read: false, action: { label: "Review", href: "/assets?asset=DOST-2024-0290" } },
   { id: "N-03", kind: "maintenance", title: "Overdue repair", body: "Mitsubishi Aircon passed its promised date with FixIT Manila", date: "2026-03-07", time: "Mar 7", read: false },
   { id: "N-02", kind: "transfer", title: "Transfer completed", body: "Ford Transit Van registered to Logistics Center • custodian Grace Tan", date: "2026-03-06", time: "Mar 6", read: false },
   { id: "N-01", kind: "warranty", title: "Warranty lapsed", body: "Samsung 55\" Display warranty ended Feb 28 — repairs are now billable", date: "2026-03-01", time: "Mar 1", read: false },
-  { id: "N-00", kind: "maintenance", title: "Repair closed", body: "MacBook Pro 16\" SSD swap completed under warranty at ₱0", date: "2026-03-02", time: "Mar 2", read: true },
+  { id: "N-00", kind: "maintenance", title: "Repair closed", body: "MacBook Pro 16-inch SSD swap completed under warranty at ₱0", date: "2026-03-02", time: "Mar 2", read: true },
 ];
 
 /* ── Property forms ───────────────────────────────────────────── */

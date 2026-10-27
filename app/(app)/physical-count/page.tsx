@@ -1,525 +1,314 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { motion, AnimatePresence } from "motion/react";
-import {
-  Camera,
-  Check,
-  CheckCircle2,
-  ChevronRight,
-  FileText,
-  Flashlight,
-  FlashlightOff,
-  Package,
-  QrCode,
-  RefreshCw,
-  Scan,
-  ScanLine,
-  Smartphone,
-  Tag,
-  TriangleAlert,
-  User,
-  Zap,
-  ZapOff,
-  ArrowLeft,
-  MapPin,
-  Building
-} from "lucide-react";
-import { useStore, useLookups } from "@/lib/store";
-import { amount, php, phpShort } from "@/lib/format";
+import { Suspense, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { AnimatePresence, motion } from "motion/react";
+import { ChevronLeft, ClipboardCheck, Flashlight, FlashlightOff, ScanLine, X, Zap, ZapOff } from "lucide-react";
+import { useLookups, useStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
+import { longDate, monthDay } from "@/lib/format";
+import { AS_OF } from "@/lib/types";
+import type { Asset, PhysicalCondition } from "@/lib/types";
+import { Topbar } from "@/components/shell/topbar";
+import { Button, Thumb } from "@/components/ui/primitives";
+import { RecordDivider } from "@/components/ui/record-kit";
 import { T } from "@/components/ui/motion";
-import { Button, CategoryChip } from "@/components/ui/primitives";
-import { StatusPill, OP_TONE, PH_TONE } from "@/components/assets/record";
-import type { PhysicalCondition, Asset } from "@/lib/types";
 
 type Step = "scan" | "confirm" | "complete";
 
+const CONDITION: { k: PhysicalCondition; meaning: string }[] = [
+  { k: "Excellent", meaning: "Fully serviceable" },
+  { k: "Fair", meaning: "Serviceable with wear" },
+  { k: "Poor", meaning: "Impaired or unsafe" },
+];
+
 export default function PhysicalCountPage() {
+  return <Suspense><PhysicalCount /></Suspense>;
+}
+
+/**
+ * 07 — Annual Physical Count, the field auditor's phone flow (Figma 4773:8205 Scan → 4773:8252 Confirm →
+ * 4773:8314 Complete). Full-screen on phones; a centred 390px column beside the sidebar on desktop.
+ */
+function PhysicalCount() {
   const { state, dispatch, toast } = useStore();
+  const params = useSearchParams();
+  const router = useRouter();
+  const assets = state.assets;
+  const total = assets.length;
+
+  // The count picks up where the design leaves it: 18 of 72 reviewed, 3 not found, MacBook Pro next.
+  const [session] = useState(() => {
+    const next = assets.find((a) => a.id === "DOST-2023-0117") ?? assets[0];
+    const done = assets.filter((a) => a.id !== next?.id).slice(-18).map((a) => a.id);
+    return { done, missing: done.slice(0, 3) };
+  });
+  const jump = params.get("step") === "complete";
+  const [reviewed, setReviewed] = useState<string[]>(() => (jump ? assets.map((a) => a.id) : session.done));
+  const [missing, setMissing] = useState<string[]>(session.missing);
+  const [changed, setChanged] = useState(2);
+  const [step, setStep] = useState<Step>(jump ? "complete" : "scan");
+  const [current, setCurrent] = useState<Asset | null>(null);
+  const [condition, setCondition] = useState<PhysicalCondition>("Excellent");
+  const [flash, setFlash] = useState(false);
+  const [manual, setManual] = useState<string | null>(null);
+  const [manualError, setManualError] = useState(false);
+  const [showMissing, setShowMissing] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const queue = useMemo(() => {
+    const done = new Set(reviewed);
+    const first = assets.find((a) => a.id === "DOST-2023-0117");
+    const rest = assets.filter((a) => !done.has(a.id) && a.id !== first?.id);
+    return first && !done.has(first.id) ? [first, ...rest] : rest;
+  }, [assets, reviewed]);
+
+  const pct = Math.round((reviewed.length / total) * 100);
+  const remaining = total - reviewed.length;
+
+  const match = (a: Asset) => { setCurrent(a); setCondition(a.condition); setManual(null); setManualError(false); setStep("confirm"); };
+  const scan = () => { if (queue[0]) match(queue[0]); };
+  const lookup = () => {
+    const t = (manual ?? "").trim().toLowerCase();
+    const a = assets.find((x) => [x.id, x.tag, x.serial].some((v) => v.toLowerCase() === t));
+    if (a) match(a); else setManualError(true);
+  };
+  const advance = (ids: string[]) => {
+    if (ids.length >= total) setStep("complete");
+    else setStep("scan");
+    setCurrent(null);
+  };
+  const confirm = () => {
+    if (!current) return;
+    if (condition !== current.condition) setChanged((n) => n + 1);
+    dispatch({ type: "auditPhysicalCount", assetId: current.id, condition, note: `Physical count 2026 · ${condition}` });
+    const ids = reviewed.includes(current.id) ? reviewed : [...reviewed, current.id];
+    setReviewed(ids);
+    setMissing((m) => m.filter((x) => x !== current.id));
+    toast({ title: `${current.name} reviewed`, body: `Condition today · ${condition}`, tone: "good" });
+    advance(ids);
+  };
+  const notFound = () => {
+    if (!current) return;
+    const ids = reviewed.includes(current.id) ? reviewed : [...reviewed, current.id];
+    setReviewed(ids);
+    setMissing((m) => (m.includes(current.id) ? m : [...m, current.id]));
+    toast({ title: `${current.name} marked not found`, body: "It stays on the report as unlocated", tone: "bad" });
+    advance(ids);
+  };
+  const submit = () => {
+    setSubmitted(true);
+    toast({ title: "Count report submitted", body: "RPCPPE sent for supply officer review", tone: "good" });
+  };
+
+  const missingAssets = missing.map((id) => assets.find((a) => a.id === id)).filter(Boolean) as Asset[];
   const L = useLookups();
 
-  const [step, setStep] = useState<Step>("scan");
-  const [frameMode, setFrameMode] = useState<"phone" | "wide">("phone");
-  const [flashOn, setFlashOn] = useState(false);
-  const [manualTag, setManualTag] = useState("");
-  const [manualOpen, setManualOpen] = useState(false);
-
-  // Pick a realistic asset from the registry for the scanner demo
-  const sampleAsset: Asset =
-    state.assets.find((a) => a.id === "DOST-2023-0117" || a.name.includes("MacBook")) ??
-    state.assets[0];
-
-  const custodian = sampleAsset.custodianId ? L.employee.get(sampleAsset.custodianId) : null;
-
-  const [selectedCondition, setSelectedCondition] = useState<PhysicalCondition>(
-    sampleAsset.condition || "Excellent"
-  );
-  const [discrepancyFlagged, setDiscrepancyFlagged] = useState(false);
-
-  // Audit counts
-  const totalAssets = state.assets.length;
-  const countedCount = 18;
-  const progressPercent = Math.round((countedCount / totalAssets) * 100);
-
-  const handleSimulateScan = () => {
-    setStep("confirm");
-  };
-
-  const handleConfirmNext = () => {
-    dispatch({
-      type: "auditPhysicalCount",
-      assetId: sampleAsset.id,
-      condition: selectedCondition,
-      note: `Physical count verified • Condition: ${selectedCondition}${
-        discrepancyFlagged ? " (Discrepancy flagged)" : ""
-      }`,
-    });
-
-    toast({
-      title: `${sampleAsset.name} Verified`,
-      body: `Annual count recorded • Condition marked as ${selectedCondition}`,
-      tone: "good",
-    });
-
-    setStep("complete");
-  };
-
-  const handleCompleteSubmission = () => {
-    dispatch({
-      type: "auditPhysicalCount",
-      assetId: sampleAsset.id,
-      note: `Annual Physical Inventory Count 2026 completed • COA RPCPPE generated`,
-    });
-
-    toast({
-      title: "Inventory Count Submitted",
-      body: "COA RPCPPE submitted to Auditor • Registry updated",
-      tone: "good",
-    });
-
-    setStep("scan");
-    setDiscrepancyFlagged(false);
-  };
-
   return (
-    <div className="max-w-[1200px] mx-auto py-4">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[12px] font-semibold bg-brand-100 text-brand-700">
-              <ScanLine size={13} /> Mobile Field Auditor
-            </span>
-            <span className="text-ink-3 text-[13px]">· COA Compliance Tool</span>
-          </div>
-          <h1 className="t-h1 text-[28px] md:text-[32px]">Annual Physical Count</h1>
-          <p className="t-b2 text-ink-2 mt-1">
-            Barcoding & Physical Inventory Verification (Figma Frames 07 · Scan, Confirm, Complete)
-          </p>
-        </div>
-
-        {/* View mode toggle */}
-        <div className="flex items-center gap-2 bg-white rounded-lg border border-line p-1 shrink-0">
-          <button
-            onClick={() => setFrameMode("phone")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors ${
-              frameMode === "phone"
-                ? "bg-brand-500 text-white shadow-sm"
-                : "text-ink-2 hover:text-ink"
-            }`}
-          >
-            <Smartphone size={15} /> Device Frame (390×844)
-          </button>
-          <button
-            onClick={() => setFrameMode("wide")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors ${
-              frameMode === "wide"
-                ? "bg-brand-500 text-white shadow-sm"
-                : "text-ink-2 hover:text-ink"
-            }`}
-          >
-            <Scan size={15} /> Full-Width
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex justify-center">
-        <div
-          className={`transition-all duration-300 ${
-            frameMode === "phone"
-              ? "w-[390px] h-[844px] rounded-[44px] border-[10px] border-[#181D27] shadow-overlay overflow-hidden bg-black flex flex-col relative"
-              : "w-full max-w-[760px] min-h-[700px] rounded-2xl border border-line bg-white p-6 shadow-sm flex flex-col"
-          }`}
-        >
-          {/* iOS Status Bar in phone mode */}
-          {frameMode === "phone" && (
-            <div className="h-11 px-6 flex items-center justify-between text-white text-[13px] font-medium shrink-0 select-none z-30">
-              <span>9:41</span>
-              <div className="size-4 rounded-full bg-black mx-auto" />
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px]">5G</span>
-                <div className="w-5 h-2.5 rounded-sm border border-white/60 p-0.5 flex">
-                  <div className="w-full h-full bg-white rounded-[1px]" />
-                </div>
-              </div>
+    <>
+      <div className="hidden md:block"><Topbar crumb="Physical Count" icon={ScanLine} /></div>
+      <main className="md:flex md:justify-center md:py-8">
+        <div className="relative flex flex-col bg-head min-h-dvh md:min-h-[780px] w-full md:w-[390px] md:border md:border-rule md:rounded-[16px] md:overflow-hidden md:shadow-raised">
+          {/* Count header */}
+          <header className="bg-white flex items-center gap-3.5 px-5 py-3 shrink-0">
+            {step === "scan" ? (
+              <button type="button" onClick={() => router.push("/")} aria-label="Close count" className="grid place-items-center size-7 -ml-1 rounded-md text-deep hover:bg-tint cursor-pointer"><X size={22} strokeWidth={2.4} /></button>
+            ) : (
+              <button type="button" onClick={() => { setStep("scan"); setCurrent(null); }} aria-label="Back to scanner" className="grid place-items-center size-7 -ml-1 rounded-md text-deep hover:bg-tint cursor-pointer"><ChevronLeft size={24} strokeWidth={2.4} /></button>
+            )}
+            <div className="flex-1 min-w-0 flex flex-col gap-1">
+              <p className="text-[16px] leading-[1.5] text-deep">Physical count 2026</p>
+              <p className="text-[14px] leading-[1.4] text-ink-2">DOST Central Office</p>
             </div>
-          )}
+            <p className="text-[12px] text-ink-2 tnum">{step === "scan" ? 1 : step === "confirm" ? 2 : 3} / 3</p>
+          </header>
 
-          {/* STEP 1: SCAN VIEWFINDER (Figma 4749:2962) */}
-          {step === "scan" && (
-            <div className="flex-1 flex flex-col bg-[#0F141C] text-white overflow-hidden relative">
-              {/* Header */}
-              <div className="px-5 py-3 border-b border-white/10 flex items-center justify-between z-20 bg-[#0F141C]/90 backdrop-blur">
-                <div>
-                  <h2 className="text-[15px] font-semibold">Physical Count 2026</h2>
-                  <p className="text-[12px] text-white/60">DOST Central Office · Step 1 of 3</p>
-                </div>
-                <button
-                  onClick={() => setFlashOn(!flashOn)}
-                  className={`size-9 rounded-full grid place-items-center transition-colors cursor-pointer ${
-                    flashOn ? "bg-amber-400 text-black" : "bg-white/10 text-white hover:bg-white/20"
-                  }`}
-                  title="Toggle Flash"
-                >
-                  {flashOn ? <Zap size={16} /> : <ZapOff size={16} />}
-                </button>
-              </div>
-
-              {/* Progress bar */}
-              <div className="px-5 py-3 bg-[#161D27] border-b border-white/10 z-20">
-                <div className="flex items-center justify-between text-[12px] mb-1.5">
-                  <span className="text-white/80">
-                    <span className="font-semibold text-white">{countedCount}</span> of{" "}
-                    {totalAssets} assets reviewed
-                  </span>
-                  <span className="font-semibold text-brand-300">{progressPercent}%</span>
-                </div>
-                <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-                  <div
-                    className="h-full bg-brand-400 rounded-full transition-all duration-500"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Camera Viewfinder */}
-              <div className="flex-1 relative flex flex-col items-center justify-center p-6 select-none overflow-hidden">
-                {/* Background camera simulation */}
-                <div
-                  className={`absolute inset-0 bg-cover bg-center transition-opacity duration-300 ${
-                    flashOn ? "opacity-35" : "opacity-20"
-                  }`}
-                  style={{
-                    backgroundImage: "radial-gradient(#38bdf8 1px, transparent 1px)",
-                    backgroundSize: "24px 24px",
-                  }}
-                />
-
-                {/* Laser scan line animation */}
-                <div className="absolute inset-x-12 top-24 bottom-32 pointer-events-none flex flex-col justify-center">
-                  <div className="w-full h-64 border-2 border-white/30 rounded-2xl relative flex items-center justify-center">
-                    {/* Corner Reticle brackets */}
-                    <div className="absolute -top-1 -left-1 size-6 border-t-4 border-l-4 border-brand-400 rounded-tl-lg" />
-                    <div className="absolute -top-1 -right-1 size-6 border-t-4 border-r-4 border-brand-400 rounded-tr-lg" />
-                    <div className="absolute -bottom-1 -left-1 size-6 border-b-4 border-l-4 border-brand-400 rounded-bl-lg" />
-                    <div className="absolute -bottom-1 -right-1 size-6 border-b-4 border-r-4 border-brand-400 rounded-br-lg" />
-
-                    {/* Animated scanning beam */}
-                    <motion.div
-                      animate={{ y: [-90, 90, -90] }}
-                      transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-                      className="w-full h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_12px_#22d3ee]"
-                    />
-
-                    {/* Target tag mockup in reticle */}
-                    <div className="text-center opacity-70">
-                      <QrCode size={48} className="mx-auto text-white/50 mb-2" />
-                      <span className="font-mono text-[11px] tracking-wider text-cyan-300">
-                        ALIGN BARCODE OR QR
-                      </span>
-                    </div>
+          <AnimatePresence mode="wait" initial={false}>
+            {step === "scan" && (
+              <motion.div key="scan" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={T.state} className="flex-1 flex flex-col">
+                {/* Review progress */}
+                <div className="bg-white px-5 py-4 flex flex-col gap-[9px] border-t border-head">
+                  <div className="flex justify-between text-[14px] font-medium leading-[1.4]">
+                    <span className="text-deep tnum">{reviewed.length} of {total} reviewed</span><span className="text-brand-700 tnum">{pct}%</span>
+                  </div>
+                  <div className="h-1.5 rounded-[3px] bg-track overflow-hidden">
+                    <motion.div className="h-full rounded-[3px] bg-brand-500" initial={false} animate={{ width: `${pct}%` }} transition={T.page} />
                   </div>
                 </div>
-
-                {/* Instructions */}
-                <div className="mt-auto mb-2 text-center z-10">
-                  <p className="text-[13px] font-medium text-white/90">
-                    Point camera at property tag
-                  </p>
-                  <p className="text-[11px] text-white/50 mt-0.5">
-                    Format: DOST-VEH-001 or DOST-IT-0042
-                  </p>
-                </div>
-              </div>
-
-              {/* Bottom Controls */}
-              <div className="p-4 bg-[#161D27] border-t border-white/10 flex flex-col gap-2.5 z-20">
-                <button
-                  onClick={handleSimulateScan}
-                  className="w-full h-11 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-[14px] flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-brand-500/20 active:scale-[0.98] transition-transform"
-                >
-                  <Scan size={18} /> Simulate Tag Scan (MacBook Pro)
-                </button>
-
-                <button
-                  onClick={() => setManualOpen(!manualOpen)}
-                  className="w-full h-9 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-[12px] font-medium flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  <Tag size={13} /> Enter Tag Manually
-                </button>
-
-                {manualOpen && (
-                  <div className="flex gap-2 mt-1">
-                    <input
-                      type="text"
-                      placeholder="e.g. DOST-2023-0117"
-                      value={manualTag}
-                      onChange={(e) => setManualTag(e.target.value)}
-                      className="flex-1 h-9 px-3 rounded-lg bg-black/40 border border-white/20 text-white text-[13px] outline-none focus:border-brand-400"
-                    />
-                    <button
-                      onClick={handleSimulateScan}
-                      className="px-4 h-9 rounded-lg bg-brand-500 text-white text-[12px] font-medium"
-                    >
-                      Look up
+                {/* Scan workspace */}
+                <div className="flex-1 flex flex-col gap-4 p-5">
+                  <div className="flex-1 min-h-[340px] bg-scan rounded-[16px] p-6 flex flex-col items-center justify-center gap-6">
+                    <div className="w-full flex items-start justify-between">
+                      <p className="text-[12px] font-semibold uppercase tracking-[0.06em] leading-[1.3] text-scan-ink">Asset tag scanner</p>
+                      <button type="button" onClick={() => setFlash((f) => !f)} aria-label={flash ? "Turn flashlight off" : "Turn flashlight on"} className="text-white/90 hover:text-white cursor-pointer">
+                        {flash ? <Flashlight size={20} /> : <FlashlightOff size={20} />}
+                      </button>
+                    </div>
+                    <button type="button" onClick={scan} aria-label={queue[0] ? `Scan tag (simulates ${queue[0].name})` : "Nothing left to scan"}
+                      className={cn("relative grid place-items-center w-[260px] h-[174px] rounded-[14px] border-[3px] border-brand-500 cursor-pointer overflow-hidden transition-shadow", flash && "shadow-[0_0_40px_rgb(255_255_255/0.25)_inset]")}>
+                      <ScanLine size={40} strokeWidth={1.5} className="text-scan-ink" />
+                      <motion.span aria-hidden className="absolute inset-x-4 h-px bg-brand-400/80" animate={{ top: ["18%", "82%", "18%"] }} transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }} />
+                    </button>
+                    <div className="w-full text-center flex flex-col gap-2">
+                      <p className="text-[20px] font-semibold leading-[1.3] tracking-[-0.01em] text-white">Point at the asset tag</p>
+                      <p className="text-[14px] leading-[1.4] text-scan-ink">DOST-YYYY-NNNN</p>
+                      <p className="text-[14px] leading-[1.4] text-scan-ink">Keep the label inside the frame.</p>
+                    </div>
+                    <button type="button" onClick={() => setFlash((f) => !f)} aria-pressed={flash}
+                      className="flex items-center gap-2 px-3.5 py-2 rounded-[8px] border border-scan-edge text-[14px] font-medium text-white hover:bg-white/5 cursor-pointer">
+                      {flash ? <Zap size={16} /> : <ZapOff size={16} />}{flash ? "Flash on" : "Flash off"}
                     </button>
                   </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* STEP 2: ASSET CONFIRMATION (Figma 4749:3009) */}
-          {step === "confirm" && (
-            <div className="flex-1 flex flex-col bg-white overflow-y-auto">
-              {/* Header */}
-              <div className="px-5 py-3 border-b border-line flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur z-10">
-                <button
-                  onClick={() => setStep("scan")}
-                  className="text-ink-2 hover:text-ink flex items-center gap-1 text-[13px] font-medium cursor-pointer"
-                >
-                  <ArrowLeft size={16} /> Rescan
-                </button>
-                <div className="text-center">
-                  <h2 className="text-[14px] font-semibold text-ink">Asset 19 of {totalAssets}</h2>
-                  <p className="text-[11px] text-ink-3">Step 2 of 3</p>
-                </div>
-                <div className="size-6" />
-              </div>
-
-              <div className="p-4 flex-1 flex flex-col gap-4">
-                {/* Verified Match Card */}
-                <div className="rounded-xl border border-good-solid/40 bg-good-soft/20 p-3.5">
-                  <div className="flex items-center gap-2 text-good-text text-[13px] font-semibold mb-2">
-                    <CheckCircle2 size={16} /> Verified Tag Match
+                  <div className="flex flex-col gap-2">
+                    {manual === null ? (
+                      <Button variant="record" size="rec" className="w-full" onClick={() => setManual("")}>Enter tag manually</Button>
+                    ) : (
+                      <form onSubmit={(e) => { e.preventDefault(); lookup(); }} className="flex gap-2">
+                        <input autoFocus value={manual} onChange={(e) => { setManual(e.target.value); setManualError(false); }} placeholder="DOST-2023-0117"
+                          className={cn("flex-1 min-w-0 h-10 px-3 rounded-[6px] border bg-white text-[15px] outline-none focus:shadow-[0_0_0_3px_var(--color-brand-100)]", manualError ? "border-bad-text" : "border-rule focus:border-brand-500")} />
+                        <Button type="submit" variant="primary" size="rec">Find</Button>
+                      </form>
+                    )}
+                    <p className={cn("text-[14px] leading-[1.4]", manualError ? "text-bad-text" : "text-ink-2")}>
+                      {manualError ? "No asset has that tag, serial or record number." : "Can’t scan the label? Type the tag instead."}
+                    </p>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="size-14 rounded-lg bg-brand-100 flex items-center justify-center text-brand-700 shrink-0">
-                      <Package size={28} />
+                </div>
+                {/* Count controls */}
+                <div className="bg-white p-5 flex items-center gap-3">
+                  <div className="flex-1 min-w-0 flex flex-col gap-1">
+                    <p className="text-[16px] leading-[1.5] text-deep tnum">{remaining} remaining</p>
+                    <p className="text-[12px] leading-[1.4] text-ink-2 tnum">{missing.length} not found so far</p>
+                  </div>
+                  <Button variant="record" size="rec" onClick={() => { toast({ title: "Count paused", body: `${reviewed.length} of ${total} reviewed · resume any time` }); router.push("/"); }}>Pause count</Button>
+                </div>
+              </motion.div>
+            )}
+
+            {step === "confirm" && current && (
+              <motion.div key="confirm" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={T.state} className="flex-1 flex flex-col">
+                <div className="flex-1 flex flex-col gap-3.5 p-5">
+                  <div className="flex justify-between text-[14px] font-medium leading-[1.4]">
+                    <span className="text-deep tnum">Asset {Math.min(total, reviewed.length + 1)} of {total}</span><span className="text-brand-700">Tag matched</span>
+                  </div>
+                  <div className="bg-white border border-rule rounded-[12px] p-4 flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <Thumb src={current.photo} category={current.category} size={60} className="rounded-[8px]" />
+                      <div className="min-w-0 flex flex-col gap-1">
+                        <p className="text-[20px] font-semibold leading-[1.3] tracking-[-0.01em] text-deep">{current.name}</p>
+                        <p className="text-[12px] leading-[1.4] text-ink-2">{current.serial} · {current.category}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <h3 className="text-[16px] font-semibold text-ink leading-snug">
-                        {sampleAsset.name}
-                      </h3>
-                      <p className="text-[12px] font-mono text-ink-2 mt-0.5">
-                        Property: {sampleAsset.id}
-                      </p>
-                      <p className="text-[12px] font-mono text-ink-3">
-                        Serial: {sampleAsset.serial}
-                      </p>
+                    <p className="text-[14px] font-medium leading-[1.4] text-brand-700">Matched tag · {current.id}</p>
+                    <RecordDivider />
+                    <div className="flex flex-col gap-1.5 leading-[1.4]">
+                      <p className="text-[12px] text-ink-2">CUSTODIAN</p>
+                      <p className="text-[14px] font-medium text-deep">{current.custodianId ? L.employee.get(current.custodianId)?.name : "Unassigned"}</p>
+                    </div>
+                    <div className="flex gap-3 leading-[1.4]">
+                      <div className="flex-1 min-w-0 flex flex-col gap-1">
+                        <p className="text-[12px] text-ink-2">LAST LOCATION</p>
+                        <p className="text-[14px] text-deep">{current.office} · {current.room}</p>
+                      </div>
+                      <div className="flex-1 min-w-0 flex flex-col gap-1">
+                        <p className="text-[12px] text-ink-2">LAST CONDITION</p>
+                        <p className="text-[14px] text-deep">{current.condition}{current.lastAudit ? ` · audited ${monthDay(current.lastAudit)}` : ""}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                {/* Recorded Custody & Location */}
-                <div className="rounded-xl border border-line bg-page/50 p-3.5 space-y-2.5 text-[13px]">
-                  <div className="flex items-center justify-between pb-2 border-b border-line">
-                    <span className="text-ink-2 flex items-center gap-1.5">
-                      <User size={14} /> Recorded Custodian
-                    </span>
-                    <span className="font-semibold text-ink">
-                      {custodian?.name ?? "Juan Dela Cruz"}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between pb-2 border-b border-line">
-                    <span className="text-ink-2 flex items-center gap-1.5">
-                      <Building size={14} /> Department
-                    </span>
-                    <span className="font-medium text-ink">{sampleAsset.department}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-ink-2 flex items-center gap-1.5">
-                      <MapPin size={14} /> Room / Location
-                    </span>
-                    <span className="font-medium text-ink">{sampleAsset.room}</span>
+                  <div role="radiogroup" aria-label="Condition today" className="flex flex-col gap-2.5">
+                    <p className="text-[20px] font-semibold leading-[1.3] tracking-[-0.01em] text-deep">Condition today</p>
+                    <p className="text-[14px] leading-[1.4] text-ink-2">Inspect the asset before confirming.</p>
+                    {CONDITION.map(({ k, meaning }) => {
+                      const on = condition === k;
+                      return (
+                        <button key={k} type="button" role="radio" aria-checked={on} onClick={() => setCondition(k)}
+                          className={cn("flex items-center gap-3 min-h-[62px] px-3.5 py-2.5 rounded-[10px] text-left cursor-pointer transition-colors duration-[120ms]",
+                            on ? "bg-pick border-2 border-brand-500" : "bg-white border border-rule hover:bg-tint")}>
+                          <span className={cn("grid place-items-center size-5 rounded-full border-2 shrink-0", on ? "border-brand-600" : "border-radio")}>
+                            {on && <span className="size-2.5 rounded-full bg-brand-600" />}
+                          </span>
+                          <span className="flex flex-col gap-[3px] leading-[1.4]">
+                            <span className="text-[14px] font-medium text-deep">{k}</span>
+                            <span className="text-[12px] text-ink-2">{meaning}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
+                <div className="bg-white px-5 pt-3 pb-5 flex flex-col gap-[9px]">
+                  <div className="flex gap-2.5">
+                    <Button variant="record" size="rec" onClick={notFound}>Not found</Button>
+                    <Button variant="primary" size="rec" className="flex-1" onClick={confirm}>Confirm &amp; next</Button>
+                  </div>
+                  <p className="text-[12px] leading-[1.4] text-ink-2">Confirm records this review; Not found marks it unlocated.</p>
+                </div>
+              </motion.div>
+            )}
 
-                {/* Condition Assessment Selector */}
-                <div>
-                  <h4 className="text-[13px] font-semibold text-ink mb-1">
-                    Physical Condition Assessment
-                  </h4>
-                  <p className="text-[11px] text-ink-3 mb-2.5">
-                    Required under COA Property Guidelines
-                  </p>
-
-                  <div className="space-y-2">
+            {step === "complete" && (
+              <motion.div key="complete" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={T.page} className="flex-1 flex flex-col">
+                <div className="flex-1 flex flex-col gap-4 p-5">
+                  <div className="flex flex-col gap-2">
+                    <span className="grid place-items-center size-10 rounded-[10px] bg-pick text-brand-700"><ClipboardCheck size={24} strokeWidth={1.75} /></span>
+                    <h1 className="text-[28px] font-bold leading-[1.2] tracking-[-0.015em] text-deep">Count review complete</h1>
+                    <p className="text-[14px] leading-[1.4] text-ink-2">{longDate(AS_OF)} · {submitted ? "Report submitted" : "Ready for report review"}</p>
+                  </div>
+                  <div className="bg-white border border-rule rounded-[12px] overflow-hidden text-[14px] leading-[1.4]">
                     {[
-                      {
-                        cond: "Excellent" as const,
-                        title: "Excellent / Good",
-                        desc: "Fully functional, normal wear, no defects",
-                      },
-                      {
-                        cond: "Fair" as const,
-                        title: "Fair Condition",
-                        desc: "Operational with minor cosmetic wear or degradation",
-                      },
-                      {
-                        cond: "Poor" as const,
-                        title: "Poor / Damaged",
-                        desc: "Non-operational or requires maintenance triage",
-                      },
-                    ].map((item) => (
-                      <label
-                        key={item.cond}
-                        className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                          selectedCondition === item.cond
-                            ? "border-brand-500 bg-brand-50/60 shadow-sm"
-                            : "border-line bg-white hover:bg-page"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="condition"
-                          checked={selectedCondition === item.cond}
-                          onChange={() => setSelectedCondition(item.cond)}
-                          className="mt-1 accent-brand-500"
-                        />
-                        <div className="min-w-0">
-                          <p className="text-[13.5px] font-semibold text-ink">{item.title}</p>
-                          <p className="text-[11.5px] text-ink-2 mt-0.5">{item.desc}</p>
-                        </div>
-                      </label>
+                      ["Reviewed", `${reviewed.length} of ${total}`],
+                      ["Physically located", `${reviewed.length - missing.length} assets`],
+                      ["Not located", `${missing.length} assets`, "text-date-over"],
+                      ["Condition changes", `${changed} assets`],
+                      ["New locations", "5 assets"],
+                    ].map(([l, v, tone]) => (
+                      <div key={l} className="flex justify-between px-4 py-3 border-b border-rule last:border-b-0">
+                        <span className="text-ink-2">{l}</span><span className={cn("font-medium tnum", tone ?? "text-deep")}>{v}</span>
+                      </div>
                     ))}
                   </div>
+                  <p className="text-[12px] leading-[1.4] text-ink-2">Condition changes and new locations may refer to the same assets; do not add these counts.</p>
+                  {missing.length > 0 && (
+                    <div className="bg-warn-wash rounded-[10px] p-3.5 flex flex-col gap-2 text-[14px] leading-[1.4] text-warn-ink">
+                      <p className="font-medium">{missing.length} asset{missing.length === 1 ? "" : "s"} remain{missing.length === 1 ? "s" : ""} unaccounted</p>
+                      <p>They stay on the report until a supply officer signs off.</p>
+                    </div>
+                  )}
+                  {missing.length > 0 && (
+                    <>
+                      <Button variant="record" size="rec" className="w-full" aria-expanded={showMissing} onClick={() => setShowMissing((v) => !v)}>
+                        {showMissing ? "Hide unaccounted assets" : "Review unaccounted assets"}
+                      </Button>
+                      <AnimatePresence initial={false}>
+                        {showMissing && (
+                          <motion.ul initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={T.state}
+                            className="bg-white border border-rule rounded-[12px] overflow-hidden">
+                            {missingAssets.map((a) => (
+                              <li key={a.id} className="flex items-center gap-3 px-4 py-2.5 border-b border-rule last:border-b-0">
+                                <Thumb src={a.photo} category={a.category} size={36} className="rounded-[8px]" />
+                                <span className="min-w-0 flex-1 leading-[1.4]">
+                                  <span className="block text-[14px] font-medium text-deep truncate">{a.name}</span>
+                                  <span className="block text-[12px] text-ink-2 truncate">{a.id} · {a.office} · {a.room}</span>
+                                </span>
+                              </li>
+                            ))}
+                          </motion.ul>
+                        )}
+                      </AnimatePresence>
+                    </>
+                  )}
                 </div>
-
-                {/* Flag discrepancy toggle */}
-                <button
-                  type="button"
-                  onClick={() => setDiscrepancyFlagged(!discrepancyFlagged)}
-                  className={`flex items-center justify-between p-3 rounded-xl border text-[13px] font-medium transition-colors cursor-pointer ${
-                    discrepancyFlagged
-                      ? "border-amber-400 bg-amber-50 text-amber-900"
-                      : "border-line text-ink-2 hover:bg-page"
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <TriangleAlert size={16} /> Flag Location or Spec Discrepancy
-                  </span>
-                  <span className="text-[12px] underline">
-                    {discrepancyFlagged ? "Flagged" : "Add note"}
-                  </span>
-                </button>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="p-4 border-t border-line bg-white flex gap-2.5 sticky bottom-0">
-                <button
-                  onClick={() => setStep("scan")}
-                  className="px-4 h-11 rounded-xl border border-line text-ink-2 text-[13px] font-medium hover:bg-page transition-colors cursor-pointer"
-                >
-                  Skip
-                </button>
-                <button
-                  onClick={handleConfirmNext}
-                  className="flex-1 h-11 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-[14px] font-semibold flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-colors"
-                >
-                  Confirm & Next Asset <ChevronRight size={16} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 3: COUNT RECONCILIATION & COA RPCPPE (Figma 4749:3071) */}
-          {step === "complete" && (
-            <div className="flex-1 flex flex-col bg-white overflow-y-auto">
-              <div className="p-5 flex-1 flex flex-col">
-                {/* Success Header */}
-                <div className="text-center pt-2 pb-4">
-                  <div className="size-16 rounded-full bg-good-soft text-good-text mx-auto grid place-items-center mb-3">
-                    <CheckCircle2 size={36} />
-                  </div>
-                  <h2 className="text-[20px] font-bold text-ink">Physical Count Complete</h2>
-                  <p className="text-[12.5px] text-ink-2 mt-1">
-                    DOST Central Office · Annual Physical Inventory 2026
-                  </p>
+                <div className="bg-white px-5 pt-4 pb-5 flex flex-col gap-2.5">
+                  <Button variant="primary" size="rec" className="w-full" disabled={submitted} onClick={submit}>{submitted ? "Count report submitted" : "Submit count report"}</Button>
+                  <p className="text-[14px] leading-[1.4] text-ink-2">RPCPPE — Report on the Physical Count of Property, Plant and Equipment</p>
+                  <p className="text-[12px] leading-[1.4] text-ink-2">{submitted ? `Submitted ${longDate(AS_OF)} for supply officer sign-off.` : "Review the report before submission. Nothing has been submitted yet."}</p>
                 </div>
-
-                {/* Summary Card */}
-                <div className="rounded-xl border border-line divide-y divide-line bg-page/40 my-3 text-[13px]">
-                  <div className="flex items-center justify-between p-3">
-                    <span className="text-ink-2">Total Assets Counted</span>
-                    <span className="font-semibold text-ink">{totalAssets} of {totalAssets}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-3">
-                    <span className="text-ink-2">Verified & Matched</span>
-                    <span className="font-semibold text-good-text">68 assets</span>
-                  </div>
-                  <div className="flex items-center justify-between p-3">
-                    <span className="text-ink-2">Condition Flagged / Damaged</span>
-                    <span className="font-semibold text-warn-text">3 assets</span>
-                  </div>
-                  <div className="flex items-center justify-between p-3">
-                    <span className="text-ink-2">Unaccounted / Missing</span>
-                    <span className="font-semibold text-bad-text">1 asset</span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-white font-medium">
-                    <span className="text-ink">Total Portfolio Value Verified</span>
-                    <span className="font-bold text-ink text-[14px]">
-                      {php(14948500)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* COA Notice */}
-                <div className="rounded-xl border border-amber-300 bg-amber-50/70 p-3.5 my-2">
-                  <p className="text-[12.5px] text-amber-900 leading-snug flex items-start gap-2">
-                    <TriangleAlert size={16} className="shrink-0 mt-0.5 text-amber-600" />
-                    <span>
-                      <strong>1 Discrepancy Flagged:</strong> Asset DOST-2021-0089 requires location
-                      reconciliation before formal audit closure.
-                    </span>
-                  </p>
-                </div>
-
-                {/* Actions */}
-                <div className="mt-auto pt-4 space-y-2.5">
-                  <Link
-                    href="/forms/PAR-2026-001"
-                    className="w-full h-11 rounded-xl border border-line bg-white hover:bg-page text-ink font-semibold text-[13px] flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <FileText size={16} className="text-brand-600" /> View / Generate COA RPCPPE Report
-                  </Link>
-
-                  <button
-                    onClick={handleCompleteSubmission}
-                    className="w-full h-11 rounded-xl bg-good-text hover:bg-good-text/90 text-white font-semibold text-[14px] flex items-center justify-center gap-2 cursor-pointer shadow-sm transition-colors"
-                  >
-                    <Check size={18} /> Submit Inventory Count to Audit
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      </div>
-    </div>
+      </main>
+    </>
   );
 }

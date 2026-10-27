@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState } from "react";
-import { ArrowRightLeft, ArrowUpRight, Eye, FileText, Paperclip, Pencil, Printer, TrendingUp, Upload, Wrench } from "lucide-react";
+import { ArrowRightLeft, ArrowUpRight, Eye, FileText, Paperclip, Pencil, Printer, Trash2, TrendingUp, Upload, Wrench } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useLookups, useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -28,7 +28,7 @@ const TABS: { key: Tab; icon: LucideIcon }[] = [
 const CARD = "rounded-[14px] bg-white border border-line/80";
 
 /** Asset Details — an entity header (photo, name, status, quick actions) over tabbed record sections. */
-export function AssetDrawer({ assetId, onClose, onTransfer, onEdit }: { assetId: string | null; onClose: () => void; onTransfer: (id: string) => void; onEdit?: (a: Asset) => void }) {
+export function AssetDrawer({ assetId, onClose, onTransfer, onEdit, onDelete }: { assetId: string | null; onClose: () => void; onTransfer: (id: string) => void; onEdit?: (a: Asset) => void; onDelete?: (a: Asset) => void }) {
   const L = useLookups();
   const a = assetId ? L.asset.get(assetId) : undefined;
   const [tab, setTab] = useState<Tab>("Overview");
@@ -65,6 +65,7 @@ export function AssetDrawer({ assetId, onClose, onTransfer, onEdit }: { assetId:
               <Button size="sm" variant="primary" icon={ArrowRightLeft} onClick={() => onTransfer(a.id)} className="h-9 px-3.5">Transfer</Button>
               <Button size="sm" icon={Printer} onClick={() => window.print()} className="h-9 px-3.5">Print label</Button>
               {onEdit && <Button size="sm" icon={Pencil} onClick={() => onEdit(a)} className="h-9 px-3.5">Edit</Button>}
+              {onDelete && <Button size="sm" variant="danger-soft" icon={Trash2} onClick={() => onDelete(a)} className="h-9 px-3.5 ml-auto">Delete</Button>}
             </div>
             <div role="tablist" className="flex gap-1 px-4">
               {TABS.map(({ key, icon: I }) => (

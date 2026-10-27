@@ -9,12 +9,14 @@ import type { AssetCategory, OperationalStatus, Priority } from "@/lib/types";
 import { T } from "./motion";
 
 /* ── Button ───────────────────────────────────────────────────── */
-type Variant = "primary" | "dark" | "gray" | "outline" | "ghost" | "soft" | "danger-soft" | "success" | "link";
+type Variant = "primary" | "dark" | "gray" | "outline" | "record" | "ghost" | "soft" | "danger-soft" | "success" | "link";
 const VARIANT: Record<Variant, string> = {
   primary: "bg-brand-500 text-white hover:bg-brand-600",
   dark: "bg-ink text-white hover:bg-n-500",
   gray: "bg-[#e3e7ea] text-ink-2 hover:bg-[#d8dde1]",
   outline: "bg-white text-ink border border-line hover:border-ink-3 hover:bg-tint",
+  // Record/Button · Outline — 0.5px Black Stroke/40 (Figma 4707:6796)
+  record: "bg-white text-ink border-[0.5px] border-n-600/40 hover:bg-tint",
   ghost: "text-ink-2 hover:bg-tint hover:text-ink",
   soft: "bg-brand-100 text-brand-700 hover:bg-brand-200",
   "danger-soft": "bg-bad-soft text-bad-text hover:bg-[#ffc2b2]",
@@ -24,7 +26,7 @@ const VARIANT: Record<Variant, string> = {
 
 export interface ButtonProps extends Omit<React.ComponentProps<typeof motion.button>, "children"> {
   variant?: Variant;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "rec";
   icon?: LucideIcon;
   iconRight?: LucideIcon;
   loading?: boolean;
@@ -34,7 +36,7 @@ export interface ButtonProps extends Omit<React.ComponentProps<typeof motion.but
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   { variant = "outline", size = "md", icon: I, iconRight: IR, loading, className, children, disabled, ...rest }, ref,
 ) {
-  const sz = size === "sm" ? "h-8 px-3 text-[13px] gap-1.5" : size === "lg" ? "h-11 px-5 text-[17px] gap-2" : "h-9 px-3.5 text-[15px] gap-2";
+  const sz = size === "sm" ? "h-8 px-3 text-[13px] gap-1.5" : size === "rec" ? "h-10 px-4 text-[15px] gap-2" : size === "lg" ? "h-11 px-5 text-[17px] gap-2" : "h-9 px-3.5 text-[15px] gap-2";
   return (
     <motion.button
       ref={ref}
