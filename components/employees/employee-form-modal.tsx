@@ -102,7 +102,7 @@ export function EmployeeFormModal({ open, employee, onClose }: { open: boolean; 
         <div className="flex items-center justify-end gap-5 mt-6">
           <button type="button" onClick={onClose} className="text-[16px] font-medium text-ink-2 hover:text-ink cursor-pointer">Cancel</button>
           <button type="button" onClick={save} disabled={saving}
-            className="relative inline-flex items-center gap-1.5 h-[30px] px-3 rounded-[6px] bg-brand-500 text-white text-[15px] font-semibold hover:bg-brand-600 cursor-pointer transition-colors disabled:opacity-70">
+            className="relative inline-flex items-center gap-1.5 h-[30px] px-3 rounded-[6px] bg-brand-action text-white text-[15px] font-semibold hover:bg-brand-action-hover cursor-pointer transition-colors disabled:opacity-70">
             <span className={cn("inline-flex items-center gap-1.5", saving && "opacity-0")}><CircleCheck size={15} />{employee ? "Save" : "Register"}</span>
             {saving && <span className="absolute inset-0 grid place-items-center"><span className="size-4 rounded-full border-2 border-white border-r-transparent animate-spin" /></span>}
           </button>

@@ -111,7 +111,7 @@ export function CalendarPopup({ open, onClose, value, onDone, align = "left", ma
         </div>
         <div className="grid grid-cols-2 gap-3 mt-5">
           <button type="button" onClick={onClose} className="h-10 rounded-[8px] bg-tint text-[15px] font-semibold hover:bg-line cursor-pointer transition-colors">Cancel</button>
-          <button type="button" onClick={() => { onDone(pick); onClose(); }} className="h-10 rounded-[8px] bg-brand-500 text-white text-[15px] font-semibold hover:bg-brand-600 cursor-pointer transition-colors">Done</button>
+          <button type="button" onClick={() => { onDone(pick); onClose(); }} className="h-10 rounded-[8px] bg-brand-action text-white text-[15px] font-semibold hover:bg-brand-action-hover cursor-pointer transition-colors">Done</button>
         </div>
       </div>
     </Popover>

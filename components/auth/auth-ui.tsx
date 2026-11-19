@@ -55,7 +55,7 @@ export const AuthField = forwardRef<HTMLInputElement, React.InputHTMLAttributes<
 export function PillButton({ children, loading, className, ...rest }: React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean }) {
   return (
     <button {...rest} disabled={rest.disabled || loading}
-      className={cn("relative w-full h-12 rounded-full bg-brand-500 text-white text-[20px] font-medium cursor-pointer transition-colors duration-[120ms] hover:bg-brand-600 active:bg-brand-700 disabled:opacity-70 focus-ring", className)}>
+      className={cn("relative w-full h-12 rounded-full bg-brand-action text-white text-[20px] font-medium cursor-pointer transition-colors duration-[120ms] hover:bg-brand-action-hover active:bg-brand-800 disabled:opacity-70 focus-ring", className)}>
       <span className={cn(loading && "opacity-0")}>{children}</span>
       {loading && <span className="absolute inset-0 grid place-items-center"><span className="size-5 rounded-full border-2 border-white border-r-transparent animate-spin" /></span>}
     </button>
@@ -97,7 +97,7 @@ export function IllustratedModal({ open, onClose, image, title, body, children, 
 export function SmallPrimary({ children, loading, arrow, className, ...rest }: React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean; arrow?: boolean }) {
   return (
     <button {...rest} disabled={rest.disabled || loading}
-      className={cn("relative inline-flex items-center justify-center gap-2 h-11 px-4 rounded-[6px] bg-brand-500 text-white text-[16px] font-semibold cursor-pointer hover:bg-brand-600 transition-colors duration-[120ms] disabled:opacity-70 focus-ring", className)}>
+      className={cn("relative inline-flex items-center justify-center gap-2 h-11 px-4 rounded-[6px] bg-brand-action text-white text-[16px] font-semibold cursor-pointer hover:bg-brand-action-hover transition-colors duration-[120ms] disabled:opacity-70 focus-ring", className)}>
       <span className={cn("inline-flex items-center gap-2", loading && "opacity-0")}>{children}{arrow && <ArrowRight size={18} />}</span>
       {loading && <span className="absolute inset-0 grid place-items-center"><span className="size-4 rounded-full border-2 border-white border-r-transparent animate-spin" /></span>}
     </button>

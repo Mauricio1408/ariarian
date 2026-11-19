@@ -176,7 +176,7 @@ function Service({ id }: { id: string }) {
         </div>
         <input value={provider} onChange={(e) => setProvider(e.target.value)} placeholder="Input Provider" className={cn(field, "mt-3", err && !provider.trim() && "shadow-[0_0_0_1px_var(--color-bad-text)]")} />
         <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Add Description" rows={3} className={cn(field, "h-20 py-3 mt-3 resize-none")} />
-        <button type="button" onClick={submit} className="w-full h-9 mt-4 rounded-md bg-brand-500 text-white text-[15px] font-medium hover:bg-brand-600 cursor-pointer transition-colors">Log service</button>
+        <button type="button" onClick={submit} className="w-full h-9 mt-4 rounded-md bg-brand-action text-white text-[15px] font-medium hover:bg-brand-action-hover cursor-pointer transition-colors">Log service</button>
       </section>
       <section className={cn(CARD, "px-6 py-5")}>
         <div className="flex items-center"><p className="t-l1 text-ink-2">Service history</p><Link href="/maintenance" className="ml-auto t-b3 text-brand-600 hover:underline">Open queue</Link></div>

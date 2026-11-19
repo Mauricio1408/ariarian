@@ -11,7 +11,7 @@ import { T } from "./motion";
 /* ── Button ───────────────────────────────────────────────────── */
 type Variant = "primary" | "dark" | "gray" | "outline" | "record" | "ghost" | "soft" | "danger-soft" | "success" | "link";
 const VARIANT: Record<Variant, string> = {
-  primary: "bg-brand-500 text-white hover:bg-brand-600",
+  primary: "bg-brand-action text-white hover:bg-brand-action-hover",
   dark: "bg-ink text-white hover:bg-n-500",
   gray: "bg-[#e3e7ea] text-ink-2 hover:bg-[#d8dde1]",
   outline: "bg-white text-ink border border-line hover:border-ink-3 hover:bg-tint",
